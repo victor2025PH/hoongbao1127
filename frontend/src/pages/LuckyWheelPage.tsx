@@ -77,10 +77,6 @@ export default function LuckyWheelPage() {
       for (let i = 0; i < count; i++) {
         const yPercent = yMin + Math.random() * (yMax - yMin)
         const xPercent = Math.random()
-        const rect = redPacketRef.current!.getBoundingClientRect()
-        const initialX = rect.left + xPercent * rect.width
-        const initialY = rect.top + yPercent * rect.height
-
         initialCoins.push({
           id: `${idPrefix}-${i}-${Date.now()}`,
           x: xPercent * 100,
