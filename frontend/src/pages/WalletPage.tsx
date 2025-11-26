@@ -321,7 +321,7 @@ export default function WalletPage() {
               </div>
               <div className="flex flex-col gap-0.5">
                 <span className="text-white font-bold text-xs">{t('invite_friends')}</span>
-                <span className="text-[10px] text-purple-300">永久獲得 10% 返佣</span>
+                <span className="text-[10px] text-purple-300">{t('permanent_earn')} 10% {t('commission')}</span>
               </div>
             </div>
             <button className="w-5 h-5 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 relative z-10">
@@ -387,10 +387,10 @@ export default function WalletPage() {
 
           <div className="relative z-10 text-center">
             <h2 className="text-xl font-black text-white tracking-tight">
-              {isHolding ? `充電中 ${Math.floor(chargeLevel)}%` : t('send_red_packet')}
+              {isHolding ? `${t('charging')} ${Math.floor(chargeLevel)}%` : t('send_red_packet')}
             </h2>
             <p className="text-orange-300/80 text-xs font-bold uppercase tracking-widest mt-1">
-              {isHolding ? '長按充能' : '長按超級充能'}
+              {isHolding ? t('hold_charge') : t('super_charge')}
             </p>
           </div>
 
@@ -587,7 +587,7 @@ export default function WalletPage() {
                     className="inline-block"
                   >
                     {onlineUsers}
-                  </motion.span> 在線
+                  </motion.span> {t('online')}
                 </span>
               </div>
               
@@ -610,7 +610,7 @@ export default function WalletPage() {
                     className="inline-block"
                   >
                     {nearbyPacketGroups}
-                  </motion.span> 紅包群
+                  </motion.span> {t('packet_groups')}
                 </span>
               </div>
               
@@ -633,7 +633,7 @@ export default function WalletPage() {
                     className="inline-block"
                   >
                     {activeGamePlayers}
-                  </motion.span> 遊戲中
+                  </motion.span> {t('gaming')}
                 </span>
               </div>
             </div>
@@ -821,7 +821,7 @@ export default function WalletPage() {
                 <span className={`text-xs font-bold uppercase tracking-widest block ${
                   isLocked ? 'text-white' : isRadarScanning ? 'text-cyan-400' : 'text-emerald-500/70'
                 }`}>
-                  {isLocked ? '目標鎖定' : isRadarScanning ? '主動掃描中...' : '被動掃描'}
+                  {isLocked ? t('target_locked') : isRadarScanning ? t('active_scan') : t('passive_scan')}
                 </span>
               </div>
             </div>
@@ -829,7 +829,7 @@ export default function WalletPage() {
             {/* 幫助文字 */}
             {!isRadarScanning && (
               <div className="absolute bottom-2 right-2 text-[10px] text-emerald-500/60 pointer-events-none animate-pulse uppercase tracking-wide z-10">
-                長按掃描
+                {t('hold_to_scan')}
               </div>
             )}
 

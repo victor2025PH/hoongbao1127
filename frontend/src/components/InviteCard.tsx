@@ -82,8 +82,8 @@ export default function InviteCard({ onClick }: InviteCardProps) {
               </motion.div>
             </div>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-purple-300 text-sm">永久獲得</span>
-              <span className="text-yellow-400 font-bold text-sm">10% 返佣</span>
+              <span className="text-purple-300 text-sm">{t('permanent_earn')}</span>
+              <span className="text-yellow-400 font-bold text-sm">10% {t('commission')}</span>
             </div>
           </div>
         </div>

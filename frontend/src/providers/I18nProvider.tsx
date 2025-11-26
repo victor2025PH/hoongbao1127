@@ -7,19 +7,85 @@ type Language = 'zh-TW' | 'zh-CN' | 'en'
 // 翻譯文本
 const translations: Record<Language, Record<string, string>> = {
   'zh-TW': {
+    // 導航
     app_name: '幸運紅包',
     wallet: '錢包',
     packets: '紅包',
     earn: '賺取',
     game: '遊戲',
     profile: '我的',
+    
+    // 錢包頁
     send_red_packet: '發紅包',
     recharge: '充值',
     withdraw: '提現',
     records: '記錄',
+    exchange: '兌換',
     total_assets: '總資產',
+    
+    // 邀請
     invite_friends: '邀請好友',
+    get_rewards: '獲得大獎勵',
+    permanent_earn: '永久獲得',
+    commission: '返佣',
+    
+    // 簽到
     daily_checkin: '每日簽到',
+    checked_in: '已簽到',
+    checking_in: '簽到中...',
+    checkin_points: '簽到 +20 積分',
+    checkin_success: '簽到成功！',
+    
+    // 任務
+    tasks: '任務',
+    complete_for_xp: '完成獲得 XP',
+    next_reset: '下次重置',
+    view_rules: '查看規則',
+    
+    // 遊戲
+    gold_fortune: '金福寶局',
+    start_game: '立即開始遊戲',
+    hot_games: '熱門遊戲',
+    vip_privileges: '尊享特權',
+    slots: '電子',
+    live: '真人',
+    sports: '體育',
+    poker: '棋牌',
+    lottery: '彩票',
+    fishing: '捕魚',
+    security: '安全保障',
+    vip_benefits: 'VIP禮遇',
+    fast_withdraw: '極速出款',
+    first_deposit: '首存送30%',
+    max_bonus: '最高888元',
+    daily_rebate: '每日返水',
+    unlimited: '無上限到賬',
+    vip_privilege: 'VIP特權',
+    exclusive: '專屬禮遇',
+    
+    // 雷達
+    online: '在線',
+    packet_groups: '紅包群',
+    gaming: '遊戲中',
+    target_locked: '目標鎖定',
+    active_scan: '主動掃描中...',
+    passive_scan: '被動掃描',
+    hold_to_scan: '長按掃描',
+    
+    // 發紅包
+    charging: '充電中',
+    hold_charge: '長按充能',
+    super_charge: '長按超級充能',
+    
+    // 能量運勢
+    energy_full: '已滿',
+    great_luck: '大吉',
+    good_luck: '中吉',
+    small_luck: '小吉',
+    normal: '平',
+    small_bad: '小凶',
+    
+    // 通用
     select_group: '選擇群組',
     amount: '金額',
     quantity: '數量',
@@ -38,21 +104,88 @@ const translations: Record<Language, Record<string, string>> = {
     settings: '設置',
     level: '等級',
     balance: '餘額',
+    come_grab: '來一起搶紅包吧！',
   },
   'zh-CN': {
+    // 导航
     app_name: '幸运红包',
     wallet: '钱包',
     packets: '红包',
     earn: '赚取',
     game: '游戏',
     profile: '我的',
+    
+    // 钱包页
     send_red_packet: '发红包',
     recharge: '充值',
     withdraw: '提现',
     records: '记录',
+    exchange: '兑换',
     total_assets: '总资产',
+    
+    // 邀请
     invite_friends: '邀请好友',
+    get_rewards: '获得大奖励',
+    permanent_earn: '永久获得',
+    commission: '返佣',
+    
+    // 签到
     daily_checkin: '每日签到',
+    checked_in: '已签到',
+    checking_in: '签到中...',
+    checkin_points: '签到 +20 积分',
+    checkin_success: '签到成功！',
+    
+    // 任务
+    tasks: '任务',
+    complete_for_xp: '完成获得 XP',
+    next_reset: '下次重置',
+    view_rules: '查看规则',
+    
+    // 游戏
+    gold_fortune: '金福宝局',
+    start_game: '立即开始游戏',
+    hot_games: '热门游戏',
+    vip_privileges: '尊享特权',
+    slots: '电子',
+    live: '真人',
+    sports: '体育',
+    poker: '棋牌',
+    lottery: '彩票',
+    fishing: '捕鱼',
+    security: '安全保障',
+    vip_benefits: 'VIP礼遇',
+    fast_withdraw: '极速出款',
+    first_deposit: '首存送30%',
+    max_bonus: '最高888元',
+    daily_rebate: '每日返水',
+    unlimited: '无上限到账',
+    vip_privilege: 'VIP特权',
+    exclusive: '专属礼遇',
+    
+    // 雷达
+    online: '在线',
+    packet_groups: '红包群',
+    gaming: '游戏中',
+    target_locked: '目标锁定',
+    active_scan: '主动扫描中...',
+    passive_scan: '被动扫描',
+    hold_to_scan: '长按扫描',
+    
+    // 发红包
+    charging: '充电中',
+    hold_charge: '长按充能',
+    super_charge: '长按超级充能',
+    
+    // 能量运势
+    energy_full: '已满',
+    great_luck: '大吉',
+    good_luck: '中吉',
+    small_luck: '小吉',
+    normal: '平',
+    small_bad: '小凶',
+    
+    // 通用
     select_group: '选择群组',
     amount: '金额',
     quantity: '数量',
@@ -71,21 +204,88 @@ const translations: Record<Language, Record<string, string>> = {
     settings: '设置',
     level: '等级',
     balance: '余额',
+    come_grab: '来一起抢红包吧！',
   },
   'en': {
+    // Navigation
     app_name: 'Lucky Red Packet',
     wallet: 'Wallet',
     packets: 'Packets',
     earn: 'Earn',
     game: 'Game',
     profile: 'Profile',
+    
+    // Wallet
     send_red_packet: 'Send Packet',
     recharge: 'Recharge',
     withdraw: 'Withdraw',
     records: 'Records',
+    exchange: 'Exchange',
     total_assets: 'Total Assets',
+    
+    // Invite
     invite_friends: 'Invite Friends',
+    get_rewards: 'Get Big Rewards',
+    permanent_earn: 'Earn Forever',
+    commission: 'Commission',
+    
+    // Check-in
     daily_checkin: 'Daily Check-in',
+    checked_in: 'Checked In',
+    checking_in: 'Checking...',
+    checkin_points: 'Check-in +20 Points',
+    checkin_success: 'Check-in Success!',
+    
+    // Tasks
+    tasks: 'Tasks',
+    complete_for_xp: 'Complete for XP',
+    next_reset: 'Next Reset',
+    view_rules: 'View Rules',
+    
+    // Game
+    gold_fortune: 'Gold Fortune',
+    start_game: 'Start Game Now',
+    hot_games: 'Hot Games',
+    vip_privileges: 'VIP Privileges',
+    slots: 'Slots',
+    live: 'Live',
+    sports: 'Sports',
+    poker: 'Poker',
+    lottery: 'Lottery',
+    fishing: 'Fishing',
+    security: 'Security',
+    vip_benefits: 'VIP Benefits',
+    fast_withdraw: 'Fast Withdraw',
+    first_deposit: '30% First Deposit',
+    max_bonus: 'Max 888',
+    daily_rebate: 'Daily Rebate',
+    unlimited: 'Unlimited',
+    vip_privilege: 'VIP Privilege',
+    exclusive: 'Exclusive',
+    
+    // Radar
+    online: 'Online',
+    packet_groups: 'Groups',
+    gaming: 'Gaming',
+    target_locked: 'Target Locked',
+    active_scan: 'Scanning...',
+    passive_scan: 'Passive Scan',
+    hold_to_scan: 'Hold to Scan',
+    
+    // Send packet
+    charging: 'Charging',
+    hold_charge: 'Hold to Charge',
+    super_charge: 'Super Charge',
+    
+    // Energy & Fortune
+    energy_full: 'Full',
+    great_luck: 'Great',
+    good_luck: 'Good',
+    small_luck: 'Fair',
+    normal: 'Normal',
+    small_bad: 'Poor',
+    
+    // Common
     select_group: 'Select Group',
     amount: 'Amount',
     quantity: 'Quantity',
@@ -104,6 +304,7 @@ const translations: Record<Language, Record<string, string>> = {
     settings: 'Settings',
     level: 'Level',
     balance: 'Balance',
+    come_grab: 'Come grab red packets!',
   },
 }
 
@@ -165,4 +366,3 @@ export function useTranslation() {
   }
   return context
 }
-

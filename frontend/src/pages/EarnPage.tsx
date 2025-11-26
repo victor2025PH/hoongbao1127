@@ -23,7 +23,7 @@ export default function EarnPage() {
     onSuccess: (data) => {
       haptic('success')
       playSound('success')
-      showAlert(`簽到成功！獲得 ${data.reward} 積分，已連續簽到 ${data.streak} 天`)
+      showAlert(`${t('checkin_success')} +${data.reward} points, ${data.streak} days`)
       queryClient.invalidateQueries({ queryKey: ['checkin-status'] })
     },
     onError: (error: Error) => {
@@ -38,7 +38,7 @@ export default function EarnPage() {
     const telegram = getTelegram()
     if (telegram) {
       const inviteLink = `https://t.me/YourBotUsername?start=invite_${Date.now()}`
-      telegram.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('來一起搶紅包吧！')}`)
+      telegram.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(t('come_grab'))}`)
     }
   }
 
@@ -172,7 +172,7 @@ export default function EarnPage() {
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] animate-shimmer" />
               <Sparkles size={16} className="fill-white" />
-              {checkInStatus?.checked_today ? '已簽到' : checkInMutation.isPending ? '簽到中...' : '簽到 +20 積分'}
+              {checkInStatus?.checked_today ? t('checked_in') : checkInMutation.isPending ? t('checking_in') : t('checkin_points')}
             </motion.button>
           </div>
 
@@ -188,7 +188,7 @@ export default function EarnPage() {
                 <UserPlus className="text-orange-500" size={20} />
               </div>
               <h3 className="text-white text-sm font-bold mb-1.5">{t('invite_friends')}</h3>
-              <p className="text-gray-500 text-xs">獲得大獎勵</p>
+              <p className="text-gray-500 text-xs">{t('get_rewards')}</p>
             </motion.div>
 
             <motion.div
@@ -200,16 +200,16 @@ export default function EarnPage() {
               <div className="w-12 h-12 bg-[#2C2C2E] rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-lg group-hover:shadow-blue-500/10">
                 <Trophy className="text-blue-500" size={20} />
               </div>
-              <h3 className="text-white text-sm font-bold mb-1.5">任務</h3>
-              <p className="text-gray-500 text-xs">完成獲得 XP</p>
+              <h3 className="text-white text-sm font-bold mb-1.5">{t('tasks')}</h3>
+              <p className="text-gray-500 text-xs">{t('complete_for_xp')}</p>
             </motion.div>
           </div>
         </div>
 
         {/* 重置提示 */}
         <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-white/5 rounded-xl p-3 flex items-center justify-between shrink-0">
-          <span className="text-xs text-gray-400 font-medium">下次重置 12h 30m</span>
-          <span className="text-xs text-orange-400 font-bold cursor-pointer hover:underline">查看規則</span>
+          <span className="text-xs text-gray-400 font-medium">{t('next_reset')} 12h 30m</span>
+          <span className="text-xs text-orange-400 font-bold cursor-pointer hover:underline">{t('view_rules')}</span>
         </div>
       </div>
     </PageTransition>

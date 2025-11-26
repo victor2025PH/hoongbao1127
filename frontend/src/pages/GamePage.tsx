@@ -1,24 +1,26 @@
 import { useState, useEffect } from 'react'
 import { Crown, Zap, Trophy, Star, Sparkles, ChevronRight, Shield, Gift, Gem } from 'lucide-react'
 import { getTelegram } from '../utils/telegram'
+import { useTranslation } from '../providers/I18nProvider'
 
 export default function GamePage() {
+  const { t } = useTranslation()
   const [isLoading, setIsLoading] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
 
   const gameCategories = [
-    { id: 'slots', name: '電子', icon: '🎰', color: 'from-purple-500 to-pink-500' },
-    { id: 'live', name: '真人', icon: '🎭', color: 'from-red-500 to-orange-500' },
-    { id: 'sports', name: '體育', icon: '⚽', color: 'from-green-500 to-emerald-500' },
-    { id: 'poker', name: '棋牌', icon: '🃏', color: 'from-blue-500 to-cyan-500' },
-    { id: 'lottery', name: '彩票', icon: '🎱', color: 'from-yellow-500 to-amber-500' },
-    { id: 'fishing', name: '捕魚', icon: '🐟', color: 'from-teal-500 to-blue-500' },
+    { id: 'slots', name: t('slots'), icon: '🎰', color: 'from-purple-500 to-pink-500' },
+    { id: 'live', name: t('live'), icon: '🎭', color: 'from-red-500 to-orange-500' },
+    { id: 'sports', name: t('sports'), icon: '⚽', color: 'from-green-500 to-emerald-500' },
+    { id: 'poker', name: t('poker'), icon: '🃏', color: 'from-blue-500 to-cyan-500' },
+    { id: 'lottery', name: t('lottery'), icon: '🎱', color: 'from-yellow-500 to-amber-500' },
+    { id: 'fishing', name: t('fishing'), icon: '🐟', color: 'from-teal-500 to-blue-500' },
   ]
 
   const promotions = [
-    { title: '首存送30%', desc: '最高888元', gradient: 'from-amber-400 via-yellow-500 to-orange-500' },
-    { title: '每日返水', desc: '無上限到賬', gradient: 'from-purple-400 via-pink-500 to-red-500' },
-    { title: 'VIP特權', desc: '專屬禮遇', gradient: 'from-cyan-400 via-blue-500 to-purple-500' },
+    { title: t('first_deposit'), desc: t('max_bonus'), gradient: 'from-amber-400 via-yellow-500 to-orange-500' },
+    { title: t('daily_rebate'), desc: t('unlimited'), gradient: 'from-purple-400 via-pink-500 to-red-500' },
+    { title: t('vip_privilege'), desc: t('exclusive'), gradient: 'from-cyan-400 via-blue-500 to-purple-500' },
   ]
 
   useEffect(() => {
@@ -78,7 +80,7 @@ export default function GamePage() {
           </div>
           
           <h1 className="text-2xl font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200 bg-clip-text text-transparent mb-0.5">
-            金福寶局
+            {t('gold_fortune')}
           </h1>
           <p className="text-purple-300/70 text-xs tracking-widest">GOLD FORTUNE BUREAU</p>
         </div>
@@ -130,7 +132,7 @@ export default function GamePage() {
             ) : (
               <>
                 <Zap className="w-5 h-5 text-white" />
-                <span className="text-white text-lg font-black">立即開始遊戲</span>
+                <span className="text-white text-lg font-black">{t('start_game')}</span>
                 <ChevronRight className="w-5 h-5 text-white/80" />
               </>
             )}
@@ -142,7 +144,7 @@ export default function GamePage() {
       <div className="px-4 py-3 bg-[#0d0d1a]">
         <div className="flex items-center gap-1.5 mb-2">
           <Sparkles className="w-4 h-4 text-amber-400" />
-          <h2 className="text-sm font-bold text-white">熱門遊戲</h2>
+          <h2 className="text-sm font-bold text-white">{t('hot_games')}</h2>
         </div>
 
         <div className="grid grid-cols-6 gap-2">
@@ -169,23 +171,23 @@ export default function GamePage() {
       <div className="px-4 py-3 bg-[#0a0a12]">
         <div className="flex items-center gap-1.5 mb-2">
           <Trophy className="w-4 h-4 text-amber-400" />
-          <h2 className="text-sm font-bold text-white">尊享特權</h2>
+          <h2 className="text-sm font-bold text-white">{t('vip_privileges')}</h2>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
           <FeatureCard
             icon={<Shield className="w-5 h-5" />}
-            title="安全保障"
+            title={t('security')}
             gradient="from-emerald-500 to-teal-600"
           />
           <FeatureCard
             icon={<Gem className="w-5 h-5" />}
-            title="VIP禮遇"
+            title={t('vip_benefits')}
             gradient="from-purple-500 to-pink-600"
           />
           <FeatureCard
             icon={<Star className="w-5 h-5" />}
-            title="極速出款"
+            title={t('fast_withdraw')}
             gradient="from-amber-500 to-orange-600"
           />
         </div>

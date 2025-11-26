@@ -12,21 +12,21 @@ interface EnergyFortunePanelProps {
 }
 
 // 计算每日幸运值（基于用户ID和日期）
-function calculateDailyFortune(userId?: number): { value: number; label: string; color: string } {
+function calculateDailyFortune(userId?: number): { value: number; labelKey: string; color: string } {
   const today = new Date()
   const seed = (userId || 0) + today.getDate() + today.getMonth() * 31 + today.getFullYear() * 365
   const fortune = (seed * 9301 + 49297) % 100 // 伪随机数生成，范围 0-99
   
   if (fortune >= 90) {
-    return { value: fortune, label: '大吉', color: 'text-yellow-400' }
+    return { value: fortune, labelKey: 'great_luck', color: 'text-yellow-400' }
   } else if (fortune >= 70) {
-    return { value: fortune, label: '中吉', color: 'text-green-400' }
+    return { value: fortune, labelKey: 'good_luck', color: 'text-green-400' }
   } else if (fortune >= 50) {
-    return { value: fortune, label: '小吉', color: 'text-cyan-400' }
+    return { value: fortune, labelKey: 'small_luck', color: 'text-cyan-400' }
   } else if (fortune >= 30) {
-    return { value: fortune, label: '平', color: 'text-gray-400' }
+    return { value: fortune, labelKey: 'normal', color: 'text-gray-400' }
   } else {
-    return { value: fortune, label: '小凶', color: 'text-orange-400' }
+    return { value: fortune, labelKey: 'small_bad', color: 'text-orange-400' }
   }
 }
 
@@ -87,7 +87,7 @@ export default function EnergyFortunePanel({
 
   // 格式化倒计时
   const formatCountdown = (ms: number): string => {
-    if (ms === 0) return '已满'
+    if (ms === 0) return t('energy_full')
     const minutes = Math.floor(ms / 60000)
     const seconds = Math.floor((ms % 60000) / 1000)
     return `${minutes}:${String(seconds).padStart(2, '0')}`
@@ -184,7 +184,7 @@ export default function EnergyFortunePanel({
             <Sparkles size={10} className={fortune.color} />
           </motion.div>
           <span className={`text-xs font-bold ${fortune.color}`}>
-            {fortune.label}
+            {t(fortune.labelKey)}
           </span>
           <span className="text-[10px] text-gray-400 font-mono">
             {fortune.value}
