@@ -569,6 +569,7 @@ export default function LuckyWheelPage() {
                 </div>
               </motion.div>
           </div>
+          </div>
 
           {/* 剩余次数 */}
           <div className="w-full max-w-sm shrink-0">
