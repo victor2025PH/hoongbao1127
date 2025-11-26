@@ -23,7 +23,7 @@ export default function Recharge() {
       haptic('success')
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      showAlert('複製失敗')
+      showAlert(t('copy_failed'))
     }
   }
 
@@ -41,7 +41,7 @@ export default function Recharge() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* 幣種選擇 */}
         <div>
-          <label className="block text-gray-300 text-base mb-2 font-medium">選擇幣種</label>
+          <label className="block text-gray-300 text-base mb-2 font-medium">{t('select_currency')}</label>
           <div className="flex gap-2">
             {['USDT', 'TON'].map((c) => (
               <button
@@ -61,7 +61,7 @@ export default function Recharge() {
 
         {/* 快捷金額 */}
         <div>
-          <label className="block text-gray-400 text-sm mb-2">快捷金額</label>
+          <label className="block text-gray-400 text-sm mb-2">{t('quick_amount')}</label>
           <div className="grid grid-cols-5 gap-2">
             {PRESET_AMOUNTS.map((preset) => (
               <button
@@ -81,7 +81,7 @@ export default function Recharge() {
 
         {/* 自定義金額 */}
         <div>
-          <label className="block text-gray-400 text-sm mb-2">自定義金額</label>
+          <label className="block text-gray-400 text-sm mb-2">{t('custom_amount')}</label>
           <input
             type="number"
             value={amount}
@@ -93,7 +93,7 @@ export default function Recharge() {
 
         {/* 收款地址 */}
         <div className="bg-brand-darker rounded-xl p-4">
-          <label className="block text-gray-400 text-sm mb-2">收款地址 ({currency})</label>
+          <label className="block text-gray-400 text-sm mb-2">{t('deposit_address')} ({currency})</label>
           <div className="flex items-center gap-2">
             <code className="flex-1 text-white text-base bg-white/5 p-3 rounded-lg overflow-hidden text-ellipsis">
               {depositAddress}
@@ -113,11 +113,11 @@ export default function Recharge() {
 
         {/* 提示 */}
         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
-          <h4 className="text-yellow-500 font-bold mb-2">注意事項</h4>
+          <h4 className="text-yellow-500 font-bold mb-2">{t('notice')}</h4>
           <ul className="text-yellow-200/80 text-base space-y-1.5">
-            <li>• 請確認轉帳網絡為 TRC-20</li>
-            <li>• 最低充值金額為 10 USDT</li>
-            <li>• 充值到帳後系統自動到帳</li>
+            <li>• {t('confirm_network')}</li>
+            <li>• {t('min_deposit')}</li>
+            <li>• {t('auto_credit')}</li>
           </ul>
         </div>
       </div>

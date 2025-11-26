@@ -85,6 +85,48 @@ const translations: Record<Language, Record<string, string>> = {
     normal: '平',
     small_bad: '小凶',
     
+    // 紅包頁
+    all: '全部',
+    crypto: '加密貨幣',
+    points: '積分',
+    grab: '領取',
+    grabbed: '已領完',
+    ordinary: '普通',
+    lucky: '幸運',
+    share_packet: '分享紅包',
+    game_group_packet: '遊戲群專屬紅包',
+    
+    // 個人頁
+    security_settings: '安全設置',
+    help_center: '幫助中心',
+    user_agreement: '用戶協議',
+    
+    // 充值頁
+    select_currency: '選擇幣種',
+    quick_amount: '快捷金額',
+    custom_amount: '自定義金額',
+    deposit_address: '收款地址',
+    copy_failed: '複製失敗',
+    notice: '注意事項',
+    confirm_network: '請確認轉帳網絡為 TRC-20',
+    min_deposit: '最低充值金額為 10 USDT',
+    auto_credit: '充值到帳後系統自動到帳',
+    
+    // 提現頁
+    withdraw_amount: '提現金額',
+    receiving_address: '收款地址',
+    enter_address: '請輸入 TRC-20 地址',
+    fee: '手續費',
+    min_withdraw: '最低提現',
+    confirm_address: '請確認地址正確，轉錯無法找回',
+    review_time: '提現申請需要 1-24 小時審核',
+    large_withdraw: '大額提現可能需要額外審核',
+    submitting: '提交中...',
+    submit_withdraw: '提交提現',
+    withdraw_submitted: '提現申請已提交，請等待審核',
+    enter_amount: '請輸入提現金額',
+    enter_receiving_address: '請輸入收款地址',
+    
     // 通用
     select_group: '選擇群組',
     amount: '金額',
@@ -185,6 +227,48 @@ const translations: Record<Language, Record<string, string>> = {
     normal: '平',
     small_bad: '小凶',
     
+    // 红包页
+    all: '全部',
+    crypto: '加密货币',
+    points: '积分',
+    grab: '领取',
+    grabbed: '已领完',
+    ordinary: '普通',
+    lucky: '幸运',
+    share_packet: '分享红包',
+    game_group_packet: '游戏群专属红包',
+    
+    // 个人页
+    security_settings: '安全设置',
+    help_center: '帮助中心',
+    user_agreement: '用户协议',
+    
+    // 充值页
+    select_currency: '选择币种',
+    quick_amount: '快捷金额',
+    custom_amount: '自定义金额',
+    deposit_address: '收款地址',
+    copy_failed: '复制失败',
+    notice: '注意事项',
+    confirm_network: '请确认转账网络为 TRC-20',
+    min_deposit: '最低充值金额为 10 USDT',
+    auto_credit: '充值到账后系统自动到账',
+    
+    // 提现页
+    withdraw_amount: '提现金额',
+    receiving_address: '收款地址',
+    enter_address: '请输入 TRC-20 地址',
+    fee: '手续费',
+    min_withdraw: '最低提现',
+    confirm_address: '请确认地址正确，转错无法找回',
+    review_time: '提现申请需要 1-24 小时审核',
+    large_withdraw: '大额提现可能需要额外审核',
+    submitting: '提交中...',
+    submit_withdraw: '提交提现',
+    withdraw_submitted: '提现申请已提交，请等待审核',
+    enter_amount: '请输入提现金额',
+    enter_receiving_address: '请输入收款地址',
+    
     // 通用
     select_group: '选择群组',
     amount: '金额',
@@ -284,6 +368,48 @@ const translations: Record<Language, Record<string, string>> = {
     small_luck: 'Fair',
     normal: 'Normal',
     small_bad: 'Poor',
+    
+    // Packets page
+    all: 'All',
+    crypto: 'Crypto',
+    points: 'Points',
+    grab: 'Grab',
+    grabbed: 'Empty',
+    ordinary: 'Ordinary',
+    lucky: 'Lucky',
+    share_packet: 'Share Packet',
+    game_group_packet: 'Game Group Packet',
+    
+    // Profile page
+    security_settings: 'Security',
+    help_center: 'Help Center',
+    user_agreement: 'Terms of Service',
+    
+    // Recharge page
+    select_currency: 'Select Currency',
+    quick_amount: 'Quick Amount',
+    custom_amount: 'Custom Amount',
+    deposit_address: 'Deposit Address',
+    copy_failed: 'Copy Failed',
+    notice: 'Notice',
+    confirm_network: 'Please confirm network is TRC-20',
+    min_deposit: 'Minimum deposit is 10 USDT',
+    auto_credit: 'Auto credit after deposit',
+    
+    // Withdraw page
+    withdraw_amount: 'Withdraw Amount',
+    receiving_address: 'Receiving Address',
+    enter_address: 'Enter TRC-20 address',
+    fee: 'Fee',
+    min_withdraw: 'Min Withdraw',
+    confirm_address: 'Please confirm address, cannot recover if wrong',
+    review_time: 'Withdrawal requires 1-24 hours review',
+    large_withdraw: 'Large withdrawals may need extra review',
+    submitting: 'Submitting...',
+    submit_withdraw: 'Submit Withdrawal',
+    withdraw_submitted: 'Withdrawal submitted, please wait for review',
+    enter_amount: 'Please enter amount',
+    enter_receiving_address: 'Please enter receiving address',
     
     // Common
     select_group: 'Select Group',

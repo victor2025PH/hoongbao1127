@@ -19,7 +19,7 @@ export default function Withdraw() {
     mutationFn: () => createWithdrawOrder(parseFloat(amount), currency, address),
     onSuccess: () => {
       haptic('success')
-      showAlert('提現申請已提交，請等待審核')
+      showAlert(t('withdraw_submitted'))
       queryClient.invalidateQueries({ queryKey: ['balance'] })
       navigate(-1)
     },
@@ -31,11 +31,11 @@ export default function Withdraw() {
 
   const handleSubmit = () => {
     if (!amount || parseFloat(amount) <= 0) {
-      showAlert('請輸入提現金額')
+      showAlert(t('enter_amount'))
       return
     }
     if (!address) {
-      showAlert('請輸入收款地址')
+      showAlert(t('enter_receiving_address'))
       return
     }
     haptic('medium')
@@ -56,7 +56,7 @@ export default function Withdraw() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
         {/* 幣種選擇 */}
         <div>
-          <label className="block text-gray-300 text-base mb-2 font-medium">選擇幣種</label>
+          <label className="block text-gray-300 text-base mb-2 font-medium">{t('select_currency')}</label>
           <div className="flex gap-2">
             {['USDT', 'TON'].map((c) => (
               <button
@@ -76,7 +76,7 @@ export default function Withdraw() {
 
         {/* 提現金額 */}
         <div>
-          <label className="block text-gray-400 text-sm mb-2">提現金額</label>
+          <label className="block text-gray-400 text-sm mb-2">{t('withdraw_amount')}</label>
           <input
             type="number"
             value={amount}
@@ -85,29 +85,29 @@ export default function Withdraw() {
             className="w-full p-4 bg-brand-darker rounded-xl border border-white/5 text-white text-xl font-bold text-center focus:outline-none focus:border-brand-red"
           />
           <p className="text-gray-400 text-sm mt-2 text-right">
-            手續費: 1 {currency} | 最低提現: 10 {currency}
+            {t('fee')}: 1 {currency} | {t('min_withdraw')}: 10 {currency}
           </p>
         </div>
 
         {/* 收款地址 */}
         <div>
-          <label className="block text-gray-400 text-sm mb-2">收款地址</label>
+          <label className="block text-gray-400 text-sm mb-2">{t('receiving_address')}</label>
           <input
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="請輸入 TRC-20 地址"
+            placeholder={t('enter_address')}
             className="w-full p-4 bg-brand-darker rounded-xl border border-white/5 text-white focus:outline-none focus:border-brand-red"
           />
         </div>
 
         {/* 提示 */}
         <div className="bg-brand-red/10 border border-brand-red/30 rounded-xl p-4">
-          <h4 className="text-brand-red font-bold mb-2">注意事項</h4>
+          <h4 className="text-brand-red font-bold mb-2">{t('notice')}</h4>
           <ul className="text-red-200/80 text-base space-y-1.5">
-            <li>• 請確認地址正確，轉錯無法找回</li>
-            <li>• 提現申請需要 1-24 小時審核</li>
-            <li>• 大額提現可能需要額外審核</li>
+            <li>• {t('confirm_address')}</li>
+            <li>• {t('review_time')}</li>
+            <li>• {t('large_withdraw')}</li>
           </ul>
         </div>
       </div>
@@ -119,7 +119,7 @@ export default function Withdraw() {
           disabled={withdrawMutation.isPending}
           className="w-full py-4 bg-gradient-to-r from-brand-red to-orange-500 rounded-xl text-white font-bold text-lg disabled:opacity-50"
         >
-          {withdrawMutation.isPending ? '提交中...' : '提交提現'}
+          {withdrawMutation.isPending ? t('submitting') : t('submit_withdraw')}
         </button>
       </div>
     </div>

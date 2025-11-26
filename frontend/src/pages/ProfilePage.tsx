@@ -68,17 +68,17 @@ export default function ProfilePage() {
         />
         <MenuItem
           icon={Shield}
-          title="安全設置"
+          title={t('security_settings')}
           onClick={() => {}}
         />
         <MenuItem
           icon={HelpCircle}
-          title="幫助中心"
+          title={t('help_center')}
           onClick={() => {}}
         />
         <MenuItem
           icon={FileText}
-          title="用戶協議"
+          title={t('user_agreement')}
           onClick={() => {}}
         />
       </div>

@@ -33,17 +33,17 @@ export default function PacketsPage() {
 
   const typeConfig = {
     ordinary: {
-      label: 'Ordinary',
+      labelKey: 'ordinary',
       color: 'text-cyan-400',
       icon: Box,
     },
     lucky: {
-      label: 'Lucky',
+      labelKey: 'lucky',
       color: 'text-purple-400',
       icon: TelegramStar,
     },
     exclusive: {
-      label: 'Exclusive',
+      labelKey: 'exclusive',
       color: 'text-yellow-400',
       icon: Crown,
     },
@@ -151,7 +151,7 @@ export default function PacketsPage() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              {tab === 'all' ? '全部' : tab === 'crypto' ? '加密貨幣' : '積分'}
+              {t(tab)}
             </motion.button>
           ))}
         </div>
@@ -208,7 +208,7 @@ export default function PacketsPage() {
                         </span>
                         {/* 游戏图标 - 移到等级后面 */}
                         {packet.isFromGameGroup && (
-                          <div className="flex items-center gap-1" title="遊戲群專屬紅包">
+                          <div className="flex items-center gap-1" title={t('game_group_packet')}>
                             <Gamepad2 size={14} className="text-purple-400" />
                           </div>
                         )}
@@ -266,7 +266,7 @@ export default function PacketsPage() {
 
                       <div className="w-[90px] h-7 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center gap-1.5 backdrop-blur-sm shadow-inner px-2">
                         <TypeIcon size={12} className={style.color} />
-                        <span className={`text-xs font-bold ${style.color}`}>{style.label}</span>
+                        <span className={`text-xs font-bold ${style.color}`}>{t(style.labelKey)}</span>
                       </div>
                     </div>
 
@@ -286,9 +286,9 @@ export default function PacketsPage() {
                       {loadingId === packet.id ? (
                         <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       ) : isGrabbed ? (
-                        '已領完'
+                        t('grabbed')
                       ) : (
-                        '領取'
+                        t('grab')
                       )}
                     </button>
                   </div>
