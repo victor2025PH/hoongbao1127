@@ -50,9 +50,9 @@ export default function LuckyWheelPage() {
   const [selectedPrize, setSelectedPrize] = useState<Prize | null>(null)
   const [spinsLeft, setSpinsLeft] = useState(3)
   const [stars, setStars] = useState<StarParticle[]>([])
-  const holdTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const progressTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const starIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const holdTimerRef = useRef<number | null>(null)
+  const progressTimerRef = useRef<number | null>(null)
+  const starIntervalRef = useRef<number | null>(null)
   const redPacketRef = useRef<HTMLDivElement>(null)
   const HOLD_DURATION = 2000 // 长按2秒触发
 
@@ -112,11 +112,11 @@ export default function LuckyWheelPage() {
     }
 
     // 持续生成星星
-    starIntervalRef.current = setInterval(generateStars, 100)
+    starIntervalRef.current = window.setInterval(generateStars, 100)
 
     // 进度条
     const startTime = Date.now()
-    progressTimerRef.current = setInterval(() => {
+    progressTimerRef.current = window.setInterval(() => {
       const elapsed = Date.now() - startTime
       const progress = Math.min(100, (elapsed / HOLD_DURATION) * 100)
       setHoldProgress(progress)
@@ -131,15 +131,15 @@ export default function LuckyWheelPage() {
   const handleEnd = () => {
     setIsHolding(false)
     if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current)
+      window.clearTimeout(holdTimerRef.current)
       holdTimerRef.current = null
     }
     if (progressTimerRef.current) {
-      clearInterval(progressTimerRef.current)
+      window.clearInterval(progressTimerRef.current)
       progressTimerRef.current = null
     }
     if (starIntervalRef.current) {
-      clearInterval(starIntervalRef.current)
+      window.clearInterval(starIntervalRef.current)
       starIntervalRef.current = null
     }
     setHoldProgress(0)
@@ -155,11 +155,11 @@ export default function LuckyWheelPage() {
 
     // 停止生成星星
     if (starIntervalRef.current) {
-      clearInterval(starIntervalRef.current)
+      window.clearInterval(starIntervalRef.current)
       starIntervalRef.current = null
     }
     if (progressTimerRef.current) {
-      clearInterval(progressTimerRef.current)
+      window.clearInterval(progressTimerRef.current)
       progressTimerRef.current = null
     }
 
