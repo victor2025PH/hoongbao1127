@@ -48,6 +48,11 @@ export default function EnergyFortunePanel({
   const [recoveryTime, setRecoveryTime] = useState(0)
   const [fortune] = useState(() => calculateDailyFortune())
 
+  // 同步外部能量值
+  useEffect(() => {
+    setCurrentEnergy(energy)
+  }, [energy])
+
   const handleClick = () => {
     playSound('click')
     navigate('/lucky-wheel')

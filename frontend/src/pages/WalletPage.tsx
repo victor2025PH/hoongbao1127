@@ -105,17 +105,36 @@ export default function WalletPage() {
   const [blips, setBlips] = useState<{id: number, x: number, y: number, delay: number, scale: number}[]>([])
   const [onlineUsers, setOnlineUsers] = useState(1204)
   const [isRadarScanning, setIsRadarScanning] = useState(false)
+  const [scanCircleScale, setScanCircleScale] = useState(1)
+  const [redPacketIcons, setRedPacketIcons] = useState<Array<{id: string, x: number, y: number, life: number}>>([])
   const [nearbyPacketGroups, setNearbyPacketGroups] = useState(23) // 附近的紅包群數量
   const [activeGamePlayers, setActiveGamePlayers] = useState(156) // 正在遊戲的人數
+  const [energy, setEnergy] = useState(100) // 体力值
+  const [fortune, setFortune] = useState(100) // 幸运值
+  const scanIntervalRef = useRef<number | null>(null)
 
+  // 更新小红包图标动画
   useEffect(() => {
-    const interval = setInterval(() => {
-      setOnlineUsers(prev => prev + Math.floor((Math.random() - 0.5) * 10))
-      setNearbyPacketGroups(prev => Math.max(0, prev + Math.floor((Math.random() - 0.5) * 3)))
-      setActiveGamePlayers(prev => Math.max(0, prev + Math.floor((Math.random() - 0.5) * 5)))
-    }, 2000)
-    return () => clearInterval(interval)
-  }, [])
+    if (redPacketIcons.length === 0) return
+
+    const animate = () => {
+      setRedPacketIcons(prev => {
+        const updated = prev
+          .map(icon => ({
+            ...icon,
+            life: icon.life + 1
+          }))
+          .filter(icon => icon.life < 60) // 3秒后消失（60帧 * 50ms）
+
+        if (updated.length > 0) {
+          requestAnimationFrame(animate)
+        }
+        return updated
+      })
+    }
+
+    requestAnimationFrame(animate)
+  }, [redPacketIcons.length])
 
   useEffect(() => {
     const count = Math.floor((signalStrength / 100) * 8) + 2
@@ -149,7 +168,81 @@ export default function WalletPage() {
   }, [rotation, targetRotation, isLocked, playSound, isRadarScanning])
 
   const handleRadarDrag = (_: any, info: any) => setRotation(prev => prev + info.delta.y * 0.5)
-  const startRadarScan = () => { setIsRadarScanning(true); playSound('switch') }
+  
+  // 点击扫描面板
+  const handleRadarClick = () => {
+    // 检查能量和幸运值
+    if (energy < 10 || fortune < 10) {
+      playSound('error')
+      return
+    }
+
+    setIsRadarScanning(true)
+    playSound('switch')
+    
+    // 消耗能量和幸运值
+    setEnergy(prev => Math.max(0, prev - 10))
+    setFortune(prev => Math.max(0, prev - 10))
+
+    // 圆圈不断放大
+    let currentScale = 1
+    const scaleInterval = window.setInterval(() => {
+      currentScale += 0.1
+      setScanCircleScale(currentScale)
+      if (currentScale > 3) {
+        currentScale = 1
+        setScanCircleScale(1)
+      }
+    }, 100)
+
+    // 生成小红包图标
+    const generateRedPacket = () => {
+      const angle = Math.random() * 360
+      const distance = 20 + Math.random() * 30
+      const x = Math.cos(angle * Math.PI / 180) * distance
+      const y = Math.sin(angle * Math.PI / 180) * distance
+      
+      setRedPacketIcons(prev => [...prev, {
+        id: `packet-${Date.now()}-${Math.random()}`,
+        x,
+        y,
+        life: 0
+      }])
+    }
+
+    // 每200ms生成一个红包图标
+    const packetInterval = window.setInterval(generateRedPacket, 200)
+
+    // 数字上升
+    const numberInterval = window.setInterval(() => {
+      setOnlineUsers(prev => prev + Math.floor(Math.random() * 3) + 1)
+      setNearbyPacketGroups(prev => prev + Math.floor(Math.random() * 2) + 1)
+      setActiveGamePlayers(prev => prev + Math.floor(Math.random() * 2) + 1)
+    }, 300)
+
+    scanIntervalRef.current = window.setInterval(() => {
+      // 持续扫描效果
+    }, 100)
+
+    // 3秒后停止
+    setTimeout(() => {
+      setIsRadarScanning(false)
+      setScanCircleScale(1)
+      window.clearInterval(scaleInterval)
+      window.clearInterval(packetInterval)
+      window.clearInterval(numberInterval)
+      if (scanIntervalRef.current) {
+        window.clearInterval(scanIntervalRef.current)
+        scanIntervalRef.current = null
+      }
+    }, 3000)
+  }
+
+  const startRadarScan = () => { 
+    // 长按功能保留，但不消耗能量
+    setIsRadarScanning(true)
+    playSound('switch')
+  }
   const endRadarScan = () => setIsRadarScanning(false)
 
   // 視覺效果配置
@@ -208,8 +301,9 @@ export default function WalletPage() {
         <div className="flex gap-2 shrink-0">
           {/* 能量运势面板 */}
           <EnergyFortunePanel 
-            energy={profile?.energy_balance || 50}
+            energy={energy}
             maxEnergy={100}
+            onEnergyUpdate={setEnergy}
           />
 
           {/* 邀請好友（縮小版） */}
@@ -418,9 +512,10 @@ export default function WalletPage() {
 
         {/* 雷達掃描器（全寬，可拉伸） */}
         <motion.div
-          className="relative w-full flex-1 min-h-0 bg-[#1C1C1E] border border-emerald-500/20 rounded-3xl overflow-hidden flex flex-row items-center shadow-lg group cursor-grab active:cursor-grabbing transition-all duration-500"
+          className="relative w-full flex-1 min-h-0 bg-[#1C1C1E] border border-emerald-500/20 rounded-3xl overflow-hidden flex flex-row items-center shadow-lg group cursor-pointer transition-all duration-500"
             onPan={handleRadarDrag}
             onContextMenu={(e) => e.preventDefault()}
+            onClick={handleRadarClick}
             onPointerDown={startRadarScan}
             onPointerUp={endRadarScan}
             onPointerLeave={endRadarScan}
@@ -516,7 +611,7 @@ export default function WalletPage() {
             </div>
 
             {/* 右側雷達圖形 */}
-            <div className="relative z-10 flex-1 flex items-center justify-center">
+            <div className="relative z-10 flex-1 flex items-center justify-center flex-col">
               <div className="relative w-24 h-24 flex items-center justify-center">
               {/* 外層光環（科技感） */}
               <motion.div
@@ -528,14 +623,26 @@ export default function WalletPage() {
                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
               />
               
-              {/* 雷達外環 */}
+              {/* 掃描圓圈 - 不斷放大 */}
               <motion.div
                 className={`absolute inset-0 rounded-full border-2 border-dashed transition-colors duration-300 ${
                   isLocked ? 'border-white shadow-[0_0_20px_white]' : isRadarScanning ? 'border-emerald-400 shadow-[0_0_15px_#10b981]' : 'border-emerald-500/30'
                 }`}
-                style={{ rotate: rotation }}
-                animate={isRadarScanning ? { rotate: 360 } : {}}
-                transition={isRadarScanning ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
+                style={{ 
+                  rotate: rotation,
+                  scale: scanCircleScale,
+                  transformOrigin: 'center'
+                }}
+                animate={isRadarScanning ? { 
+                  rotate: 360,
+                  scale: scanCircleScale
+                } : {
+                  scale: 1
+                }}
+                transition={isRadarScanning ? { 
+                  rotate: { duration: 1, repeat: Infinity, ease: "linear" },
+                  scale: { duration: 0.1, ease: "linear" }
+                } : {}}
               >
                 <motion.div
                   className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_10px_lime]"
@@ -624,6 +731,31 @@ export default function WalletPage() {
                     </motion.div>
                   ))}
                 </AnimatePresence>
+
+                {/* 小红包图标 - 不断弹出 */}
+                <AnimatePresence>
+                  {redPacketIcons.map(packet => (
+                    <motion.div
+                      key={packet.id}
+                      className="absolute z-20"
+                      style={{
+                        left: `calc(50% + ${packet.x}px)`,
+                        top: `calc(50% + ${packet.y}px)`,
+                        transform: 'translate(-50%, -50%)'
+                      }}
+                      initial={{ opacity: 0, scale: 0, y: 0 }}
+                      animate={{ 
+                        opacity: [0, 1, 1, 0],
+                        scale: [0, 1.2, 1, 0.8],
+                        y: -20
+                      }}
+                      exit={{ opacity: 0, scale: 0 }}
+                      transition={{ duration: 3, ease: "easeOut" }}
+                    >
+                      <Gift size={16} className="text-red-500 drop-shadow-[0_0_6px_#ef4444]" />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
 
                 {/* 中心圖標（增強科技感） */}
@@ -652,15 +784,17 @@ export default function WalletPage() {
                 </div>
               </div>
 
-              {/* 狀態文字（在雷達圖形下方） */}
-              <div className="mt-2 text-center z-10 select-none">
-                <span className={`text-xs font-bold uppercase tracking-widest block ${
-                  isLocked ? 'text-white' : isRadarScanning ? 'text-cyan-400' : 'text-emerald-500/70'
-                }`}>
-                  {isLocked ? '目標鎖定' : isRadarScanning ? '主動掃描中...' : '被動掃描'}
-                </span>
-              </div>
             </div>
+            
+            {/* 狀態文字（移到最右側） */}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10 select-none">
+              <span className={`text-xs font-bold uppercase tracking-widest block ${
+                isLocked ? 'text-white' : isRadarScanning ? 'text-cyan-400' : 'text-emerald-500/70'
+              }`}>
+                {isLocked ? '目標鎖定' : isRadarScanning ? '主動掃描中...' : '被動掃描'}
+              </span>
+            </div>
+          </div>
             
             {/* 幫助文字 */}
             {!isRadarScanning && (
