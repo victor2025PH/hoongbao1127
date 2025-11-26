@@ -5,6 +5,7 @@ import { useTranslation } from '../providers/I18nProvider'
 import { useSound } from '../hooks/useSound'
 import { useNavigate } from 'react-router-dom'
 import PageTransition from '../components/PageTransition'
+import TelegramStar from '../components/TelegramStar'
 import confetti from 'canvas-confetti'
 
 interface Prize {
@@ -488,46 +489,54 @@ export default function LuckyWheelPage() {
               {/* 金色横带 */}
               <div className="absolute bottom-32 left-0 right-0 h-12 bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 border-y-2 border-amber-600/30 shadow-inner">
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
-                
-                {/* "开"按钮 - 居中在横带上，使用transform居中，不受红包动画影响 */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 z-20">
-                  <motion.div
-                    className="w-full h-full"
-                    animate={isHolding ? {
-                      scale: [1, 1.1, 1],
-                    } : {
-                      scale: 1,
-                    }}
-                    transition={{
-                      duration: 0.5,
-                      repeat: isHolding ? Infinity : 0,
-                      ease: "easeInOut",
-                    }}
-                  >
-                  <div className="relative w-full h-full">
-                    {/* 四叶草形状背景 */}
-                    <div
-                      className="absolute inset-0 bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 rounded-full"
-                      style={{
-                        clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-                        boxShadow: '0 0 20px rgba(245, 158, 11, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.3)',
-                      }}
-                    />
-                    {/* 按钮文字 */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-4xl font-black text-red-700 drop-shadow-lg">开</span>
-                    </div>
-                    {/* 按钮高光 */}
-                    <div
-                      className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-1/2 bg-gradient-to-b from-white/40 to-transparent rounded-full"
-                      style={{
-                        clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 50%, 0% 75%, 0% 25%)',
-                      }}
-                    />
-                  </div>
-                  </motion.div>
-                </div>
               </div>
+            </motion.div>
+            
+            {/* 星星按钮 - 固定在横带中心，不受红包动画影响，使用fixed定位 */}
+            <div 
+              className="absolute bottom-32 left-1/2 -translate-x-1/2 w-28 h-28 z-30"
+              style={{
+                marginBottom: '-56px', // 居中在横带上（h-12 = 48px, 按钮高度的一半）
+              }}
+            >
+              <motion.div
+                className="w-full h-full flex items-center justify-center"
+                animate={isHolding ? {
+                  scale: [1, 1.15, 1],
+                } : {
+                  scale: 1,
+                }}
+                transition={{
+                  duration: 0.5,
+                  repeat: isHolding ? Infinity : 0,
+                  ease: "easeInOut",
+                }}
+                style={{
+                  transformOrigin: 'center center',
+                }}
+              >
+                <div className="relative w-full h-full">
+                  {/* 四叶草形状背景 */}
+                  <div
+                    className="absolute inset-0 bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 rounded-full"
+                    style={{
+                      clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                      boxShadow: '0 0 20px rgba(245, 158, 11, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.3)',
+                    }}
+                  />
+                  {/* 星星图标 */}
+                  <div className="absolute inset-0 flex items-center justify-center z-10">
+                    <TelegramStar size={48} withSpray={isHolding} className="drop-shadow-[0_0_12px_rgba(255,215,0,0.8)]" />
+                  </div>
+                  {/* 按钮高光 */}
+                  <div
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-1/2 bg-gradient-to-b from-white/40 to-transparent rounded-full"
+                    style={{
+                      clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 50%, 0% 75%, 0% 25%)',
+                    }}
+                  />
+                </div>
+              </motion.div>
 
               {/* 进度条 */}
               {isHolding && (
