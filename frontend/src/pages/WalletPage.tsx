@@ -168,7 +168,19 @@ export default function WalletPage() {
     delay: Math.random() * 2
   }))
 
-  const triggerGameBurst = (e: React.SyntheticEvent) => {
+  // 遊戲按鈕 hover 狀態
+  const [isGameHovered, setIsGameHovered] = useState(false)
+  
+  const handleGameHover = () => {
+    setIsGameHovered(true)
+    playSound('pop')
+  }
+  
+  const handleGameLeave = () => {
+    setIsGameHovered(false)
+  }
+  
+  const handleGameClick = () => {
     playSound('pop')
     navigate('/game')
   }
@@ -267,36 +279,47 @@ export default function WalletPage() {
           {/* 遊戲按鈕（帶特效） */}
           <div
             className="relative flex flex-col items-center justify-center cursor-pointer group h-full"
-            onPointerEnter={triggerGameBurst}
-            onTouchStart={triggerGameBurst}
-            onClick={triggerGameBurst}
+            onPointerEnter={handleGameHover}
+            onPointerLeave={handleGameLeave}
+            onTouchStart={handleGameHover}
+            onClick={handleGameClick}
           >
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-              {gameRays.map((ray) => (
+            {/* 光環效果（僅在 hover 時顯示） */}
+            <AnimatePresence>
+              {isGameHovered && (
                 <motion.div
-                  key={ray.id}
-                  className="absolute bottom-1/2 left-1/2 origin-bottom rounded-t-full"
-                  style={{
-                    width: ray.width,
-                    background: `linear-gradient(to top, ${ray.color}, transparent)`,
-                    filter: 'blur(3px)'
-                  }}
-                  initial={{ rotate: ray.angle, height: '40%', opacity: 0 }}
-                  animate={{
-                    height: ['60%', '160%', '60%'],
-                    opacity: [0.1, 0.5, 0.1],
-                    rotate: [ray.angle - 5, ray.angle + 5, ray.angle - 5]
-                  }}
-                  transition={{
-                    duration: ray.duration,
-                    repeat: Infinity,
-                    repeatType: "reverse",
-                    ease: "easeInOut",
-                    delay: ray.delay
-                  }}
-                />
-              ))}
-            </div>
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none z-0"
+                >
+                  {gameRays.map((ray) => (
+                    <motion.div
+                      key={ray.id}
+                      className="absolute bottom-1/2 left-1/2 origin-bottom rounded-t-full"
+                      style={{
+                        width: ray.width,
+                        background: `linear-gradient(to top, ${ray.color}, transparent)`,
+                        filter: 'blur(3px)'
+                      }}
+                      initial={{ rotate: ray.angle, height: '40%', opacity: 0 }}
+                      animate={{
+                        height: ['60%', '160%', '60%'],
+                        opacity: [0.1, 0.8, 0.1],
+                        rotate: [ray.angle - 5, ray.angle + 5, ray.angle - 5]
+                      }}
+                      transition={{
+                        duration: ray.duration,
+                        repeat: Infinity,
+                        repeatType: "reverse",
+                        ease: "easeInOut",
+                        delay: ray.delay
+                      }}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
             <motion.div
               whileHover={{ scale: 1.15 }}
               whileTap={{ scale: 0.95 }}
