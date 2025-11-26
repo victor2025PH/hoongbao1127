@@ -68,74 +68,47 @@ export default function LuckyWheelPage() {
   // 虚拟币图标类型
   const coinIcons = [Coins, DollarSign, Star, Sparkles, Circle, Trophy]
 
-  // 初始化红包上的虚拟币符号 - 底部密集，向上稀疏
-  useEffect(() => {
+  // 恢复红包状态：重新生成符号
+  const restoreRedPacket = () => {
     if (!redPacketRef.current) return
 
     const initialCoins: CoinSymbol[] = []
-    // 使用百分比定位，相对于红包容器
-    const packetWidth = 100 // 使用百分比
-    const packetHeight = 100 // 使用百分比
+    const addCoin = (idPrefix: string, yMin: number, yMax: number, count: number, minSize: number, maxSize: number) => {
+      for (let i = 0; i < count; i++) {
+        const yPercent = yMin + Math.random() * (yMax - yMin)
+        const xPercent = Math.random()
+        const rect = redPacketRef.current!.getBoundingClientRect()
+        const initialX = rect.left + xPercent * rect.width
+        const initialY = rect.top + yPercent * rect.height
 
-    // 底部密集，向上稀疏的分布
-    // 底部区域（0-40%）：密集分布
-    for (let i = 0; i < 40; i++) {
-      const yPercent = Math.random() * 0.4 // 0-40%
-      const xPercent = Math.random() * 100 // 0-100%
-      initialCoins.push({
-        id: `coin-bottom-${i}`,
-        x: xPercent, // 使用百分比
-        y: 100 - yPercent * 100, // 从底部开始，使用百分比
-        icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
-        size: 10 + Math.random() * 8,
-        rotation: Math.random() * 360,
-        isFlying: false,
-        vx: 0,
-        vy: 0,
-        life: 0,
-        maxLife: 100,
-      })
+        initialCoins.push({
+          id: `${idPrefix}-${i}-${Date.now()}`,
+          x: xPercent * 100,
+          y: yPercent * 100,
+          icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
+          size: minSize + Math.random() * (maxSize - minSize),
+          rotation: Math.random() * 360,
+          isFlying: false,
+          vx: 0,
+          vy: 0,
+          life: 0,
+          maxLife: 100 + Math.random() * 50,
+          initialX: initialX,
+          initialY: initialY,
+        })
+      }
     }
 
-    // 中部区域（40-70%）：中等密度
-    for (let i = 0; i < 20; i++) {
-      const yPercent = 0.4 + Math.random() * 0.3 // 40-70%
-      const xPercent = Math.random() * 100
-      initialCoins.push({
-        id: `coin-middle-${i}`,
-        x: xPercent,
-        y: 100 - yPercent * 100,
-        icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
-        size: 8 + Math.random() * 6,
-        rotation: Math.random() * 360,
-        isFlying: false,
-        vx: 0,
-        vy: 0,
-        life: 0,
-        maxLife: 100,
-      })
-    }
-
-    // 上部区域（70-100%）：稀疏分布
-    for (let i = 0; i < 10; i++) {
-      const yPercent = 0.7 + Math.random() * 0.3 // 70-100%
-      const xPercent = Math.random() * 100
-      initialCoins.push({
-        id: `coin-top-${i}`,
-        x: xPercent,
-        y: 100 - yPercent * 100,
-        icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
-        size: 6 + Math.random() * 6,
-        rotation: Math.random() * 360,
-        isFlying: false,
-        vx: 0,
-        vy: 0,
-        life: 0,
-        maxLife: 100,
-      })
-    }
+    addCoin('coin-bottom', 0.6, 1.0, 40, 10, 18)
+    addCoin('coin-middle', 0.3, 0.6, 20, 8, 14)
+    addCoin('coin-top', 0.0, 0.3, 10, 6, 12)
 
     setCoins(initialCoins)
+  }
+
+  // 初始化红包上的虚拟币符号 - 底部密集，向上稀疏
+  useEffect(() => {
+    restoreRedPacket()
   }, [])
 
   // 抽奖逻辑
@@ -598,45 +571,9 @@ export default function LuckyWheelPage() {
                 onClick={() => {
                   setSelectedPrize(null)
                   // 恢复红包状态：重新生成符号并微微发光
-                  if (redPacketRef.current) {
-                    const rect = redPacketRef.current.getBoundingClientRect()
-                    const packetWidth = rect.width
-                    const packetHeight = rect.height
-                    const packetTop = rect.top
-                    const packetLeft = rect.left
-
-                    const initialCoins: CoinSymbol[] = []
-                    const addCoin = (idPrefix: string, yMin: number, yMax: number, count: number, minSize: number, maxSize: number) => {
-                      for (let i = 0; i < count; i++) {
-                        const yPercent = yMin + Math.random() * (yMax - yMin)
-                        const xPercent = Math.random()
-                        const initialX = packetLeft + xPercent * packetWidth
-                        const initialY = packetTop + yPercent * packetHeight
-
-                        initialCoins.push({
-                          id: `${idPrefix}-${i}-${Date.now()}`,
-                          x: xPercent * 100,
-                          y: yPercent * 100,
-                          icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
-                          size: minSize + Math.random() * (maxSize - minSize),
-                          rotation: Math.random() * 360,
-                          isFlying: false,
-                          vx: 0,
-                          vy: 0,
-                          life: 0,
-                          maxLife: 100 + Math.random() * 50,
-                          initialX: initialX,
-                          initialY: initialY,
-                        })
-                      }
-                    }
-
-                    addCoin('coin-bottom', 0.6, 1.0, 40, 10, 18)
-                    addCoin('coin-middle', 0.3, 0.6, 20, 8, 14)
-                    addCoin('coin-top', 0.0, 0.3, 10, 6, 12)
-
-                    setCoins(initialCoins)
-                  }
+                  setTimeout(() => {
+                    restoreRedPacket()
+                  }, 100)
                 }}
               />
               <motion.div
@@ -663,45 +600,9 @@ export default function LuckyWheelPage() {
                   onClick={() => {
                     setSelectedPrize(null)
                     // 恢复红包状态：重新生成符号并微微发光
-                    if (redPacketRef.current) {
-                      const rect = redPacketRef.current.getBoundingClientRect()
-                      const packetWidth = rect.width
-                      const packetHeight = rect.height
-                      const packetTop = rect.top
-                      const packetLeft = rect.left
-
-                      const initialCoins: CoinSymbol[] = []
-                      const addCoin = (idPrefix: string, yMin: number, yMax: number, count: number, minSize: number, maxSize: number) => {
-                        for (let i = 0; i < count; i++) {
-                          const yPercent = yMin + Math.random() * (yMax - yMin)
-                          const xPercent = Math.random()
-                          const initialX = packetLeft + xPercent * packetWidth
-                          const initialY = packetTop + yPercent * packetHeight
-
-                          initialCoins.push({
-                            id: `${idPrefix}-${i}-${Date.now()}`,
-                            x: xPercent * 100,
-                            y: yPercent * 100,
-                            icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
-                            size: minSize + Math.random() * (maxSize - minSize),
-                            rotation: Math.random() * 360,
-                            isFlying: false,
-                            vx: 0,
-                            vy: 0,
-                            life: 0,
-                            maxLife: 100 + Math.random() * 50,
-                            initialX: initialX,
-                            initialY: initialY,
-                          })
-                        }
-                      }
-
-                      addCoin('coin-bottom', 0.6, 1.0, 40, 10, 18)
-                      addCoin('coin-middle', 0.3, 0.6, 20, 8, 14)
-                      addCoin('coin-top', 0.0, 0.3, 10, 6, 12)
-
-                      setCoins(initialCoins)
-                    }
+                    setTimeout(() => {
+                      restoreRedPacket()
+                    }, 100)
                   }}
                   className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold"
                   whileHover={{ scale: 1.02 }}
