@@ -14,7 +14,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from shared.database.connection import SyncSessionLocal
-from shared.database.models import User, RedPacket, Transaction, CheckIn
+from shared.database.models import User, RedPacket, Transaction, CheckinRecord
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
 
@@ -110,10 +110,10 @@ def get_users(page: int = 1, limit: int = 20, db=Depends(get_db)):
                 "users": [
                     {
                         "id": u.id,
-                        "telegram_id": u.telegram_id,
+                        "telegram_id": u.tg_id,
                         "username": u.username,
-                        "balance": float(u.balance) if u.balance else 0,
-                        "energy": u.energy,
+                        "balance": float(u.balance_usdt) if u.balance_usdt else 0,
+                        "energy": u.xp,
                         "level": u.level,
                         "created_at": u.created_at.isoformat() if u.created_at else None
                     }
@@ -177,7 +177,7 @@ def get_transactions(page: int = 1, limit: int = 20, db=Depends(get_db)):
                         "user_id": t.user_id,
                         "type": t.type,
                         "amount": float(t.amount) if t.amount else 0,
-                        "status": t.status,
+                        "status": "completed",
                         "created_at": t.created_at.isoformat() if t.created_at else None
                     }
                     for t in transactions
