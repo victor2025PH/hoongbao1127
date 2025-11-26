@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Gift, Zap, Sparkles, Trophy, TrendingUp, ArrowLeft, Star, Coins, DollarSign, Circle } from 'lucide-react'
+import { Gift, Zap, Sparkles, Trophy, TrendingUp, ArrowLeft, Star, Coins, DollarSign, Circle, Shield } from 'lucide-react'
 import { useTranslation } from '../providers/I18nProvider'
 import { useSound } from '../hooks/useSound'
 import { useNavigate } from 'react-router-dom'
@@ -332,38 +332,6 @@ export default function LuckyWheelPage() {
           <div className="w-10" />
         </div>
 
-        {/* 飞行的虚拟币符号层 - 使用固定定位 */}
-        <div className="fixed inset-0 pointer-events-none z-30">
-          {coins.filter(coin => coin.isFlying).map(coin => {
-            const Icon = coin.icon
-            return (
-              <motion.div
-                key={coin.id}
-                className="absolute"
-                style={{
-                  left: coin.x,
-                  top: coin.y,
-                  transform: `translate(-50%, -50%) rotate(${coin.rotation}deg)`,
-                }}
-                animate={{
-                  scale: [1, 1.2, 0.8],
-                }}
-                transition={{
-                  duration: 0.5,
-                  ease: "easeInOut",
-                }}
-              >
-                <Icon
-                  size={coin.size}
-                  className="text-yellow-400"
-                  style={{
-                    filter: 'drop-shadow(0 0 6px #fbbf24)',
-                  }}
-                />
-              </motion.div>
-            )
-          })}
-        </div>
 
         {/* 主要内容区域 */}
         <div className="flex-1 flex flex-col items-center justify-start gap-4 p-4 min-h-0 pt-8 relative">
@@ -521,11 +489,11 @@ export default function LuckyWheelPage() {
               </div>
             </motion.div>
             
-          {/* 星星按钮 - 固定在横带中心，不受红包动画影响，相对于父容器定位 */}
+          {/* 盾牌按钮 - 固定在上部红色中间位置，不受红包动画影响 */}
           <div 
             className="absolute w-28 h-28 z-30 pointer-events-none"
             style={{
-              bottom: 'calc(50% - 48px)', // 横带位置（bottom-32 = 128px，从底部算起，横带中心在 128px + 24px = 152px，按钮中心应该在 152px）
+              top: '15%', // 上部红色中间位置
               left: '50%',
               transform: 'translateX(-50%)',
             }}
@@ -547,23 +515,23 @@ export default function LuckyWheelPage() {
                 }}
               >
                 <div className="relative w-full h-full">
-                  {/* 四叶草形状背景 */}
+                  {/* 盾牌形状背景 */}
                   <div
-                    className="absolute inset-0 bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 rounded-full"
+                    className="absolute inset-0 bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600"
                     style={{
-                      clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                      clipPath: 'polygon(50% 0%, 100% 20%, 100% 60%, 50% 100%, 0% 60%, 0% 20%)',
                       boxShadow: '0 0 20px rgba(245, 158, 11, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.3)',
                     }}
                   />
-                  {/* 星星图标 */}
+                  {/* 盾牌图标 */}
                   <div className="absolute inset-0 flex items-center justify-center z-10">
-                    <TelegramStar size={48} withSpray={isHolding} className="drop-shadow-[0_0_12px_rgba(255,215,0,0.8)]" />
+                    <Shield size={48} className="text-amber-600 drop-shadow-[0_0_12px_rgba(255,215,0,0.8)]" fill="currentColor" />
                   </div>
                   {/* 按钮高光 */}
                   <div
-                    className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-1/2 bg-gradient-to-b from-white/40 to-transparent rounded-full"
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-1/3 bg-gradient-to-b from-white/40 to-transparent"
                     style={{
-                      clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 50%, 0% 75%, 0% 25%)',
+                      clipPath: 'polygon(50% 0%, 100% 20%, 50% 30%, 0% 20%)',
                     }}
                   />
                 </div>
@@ -627,7 +595,49 @@ export default function LuckyWheelPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                onClick={() => setSelectedPrize(null)}
+                onClick={() => {
+                  setSelectedPrize(null)
+                  // 恢复红包状态：重新生成符号并微微发光
+                  if (redPacketRef.current) {
+                    const rect = redPacketRef.current.getBoundingClientRect()
+                    const packetWidth = rect.width
+                    const packetHeight = rect.height
+                    const packetTop = rect.top
+                    const packetLeft = rect.left
+
+                    const initialCoins: CoinSymbol[] = []
+                    const addCoin = (idPrefix: string, yMin: number, yMax: number, count: number, minSize: number, maxSize: number) => {
+                      for (let i = 0; i < count; i++) {
+                        const yPercent = yMin + Math.random() * (yMax - yMin)
+                        const xPercent = Math.random()
+                        const initialX = packetLeft + xPercent * packetWidth
+                        const initialY = packetTop + yPercent * packetHeight
+
+                        initialCoins.push({
+                          id: `${idPrefix}-${i}-${Date.now()}`,
+                          x: xPercent * 100,
+                          y: yPercent * 100,
+                          icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
+                          size: minSize + Math.random() * (maxSize - minSize),
+                          rotation: Math.random() * 360,
+                          isFlying: false,
+                          vx: 0,
+                          vy: 0,
+                          life: 0,
+                          maxLife: 100 + Math.random() * 50,
+                          initialX: initialX,
+                          initialY: initialY,
+                        })
+                      }
+                    }
+
+                    addCoin('coin-bottom', 0.6, 1.0, 40, 10, 18)
+                    addCoin('coin-middle', 0.3, 0.6, 20, 8, 14)
+                    addCoin('coin-top', 0.0, 0.3, 10, 6, 12)
+
+                    setCoins(initialCoins)
+                  }
+                }}
               />
               <motion.div
                 initial={{ scale: 0.5, opacity: 0, y: 50 }}
@@ -650,7 +660,49 @@ export default function LuckyWheelPage() {
                   {selectedPrize.name}
                 </p>
                 <motion.button
-                  onClick={() => setSelectedPrize(null)}
+                  onClick={() => {
+                    setSelectedPrize(null)
+                    // 恢复红包状态：重新生成符号并微微发光
+                    if (redPacketRef.current) {
+                      const rect = redPacketRef.current.getBoundingClientRect()
+                      const packetWidth = rect.width
+                      const packetHeight = rect.height
+                      const packetTop = rect.top
+                      const packetLeft = rect.left
+
+                      const initialCoins: CoinSymbol[] = []
+                      const addCoin = (idPrefix: string, yMin: number, yMax: number, count: number, minSize: number, maxSize: number) => {
+                        for (let i = 0; i < count; i++) {
+                          const yPercent = yMin + Math.random() * (yMax - yMin)
+                          const xPercent = Math.random()
+                          const initialX = packetLeft + xPercent * packetWidth
+                          const initialY = packetTop + yPercent * packetHeight
+
+                          initialCoins.push({
+                            id: `${idPrefix}-${i}-${Date.now()}`,
+                            x: xPercent * 100,
+                            y: yPercent * 100,
+                            icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
+                            size: minSize + Math.random() * (maxSize - minSize),
+                            rotation: Math.random() * 360,
+                            isFlying: false,
+                            vx: 0,
+                            vy: 0,
+                            life: 0,
+                            maxLife: 100 + Math.random() * 50,
+                            initialX: initialX,
+                            initialY: initialY,
+                          })
+                        }
+                      }
+
+                      addCoin('coin-bottom', 0.6, 1.0, 40, 10, 18)
+                      addCoin('coin-middle', 0.3, 0.6, 20, 8, 14)
+                      addCoin('coin-top', 0.0, 0.3, 10, 6, 12)
+
+                      setCoins(initialCoins)
+                    }
+                  }}
                   className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
