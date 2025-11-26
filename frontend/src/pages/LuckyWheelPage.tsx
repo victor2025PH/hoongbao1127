@@ -72,21 +72,19 @@ export default function LuckyWheelPage() {
     if (!redPacketRef.current) return
 
     const initialCoins: CoinSymbol[] = []
-    const rect = redPacketRef.current.getBoundingClientRect()
-    const packetWidth = rect.width
-    const packetHeight = rect.height
-    const packetTop = rect.top
-    const packetLeft = rect.left
+    // 使用百分比定位，相对于红包容器
+    const packetWidth = 100 // 使用百分比
+    const packetHeight = 100 // 使用百分比
 
     // 底部密集，向上稀疏的分布
     // 底部区域（0-40%）：密集分布
     for (let i = 0; i < 40; i++) {
       const yPercent = Math.random() * 0.4 // 0-40%
-      const xPercent = Math.random() // 0-100%
+      const xPercent = Math.random() * 100 // 0-100%
       initialCoins.push({
         id: `coin-bottom-${i}`,
-        x: packetLeft + xPercent * packetWidth,
-        y: packetTop + (1 - yPercent) * packetHeight, // 从底部开始
+        x: xPercent, // 使用百分比
+        y: 100 - yPercent * 100, // 从底部开始，使用百分比
         icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
         size: 10 + Math.random() * 8,
         rotation: Math.random() * 360,
@@ -101,11 +99,11 @@ export default function LuckyWheelPage() {
     // 中部区域（40-70%）：中等密度
     for (let i = 0; i < 20; i++) {
       const yPercent = 0.4 + Math.random() * 0.3 // 40-70%
-      const xPercent = Math.random()
+      const xPercent = Math.random() * 100
       initialCoins.push({
         id: `coin-middle-${i}`,
-        x: packetLeft + xPercent * packetWidth,
-        y: packetTop + (1 - yPercent) * packetHeight,
+        x: xPercent,
+        y: 100 - yPercent * 100,
         icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
         size: 8 + Math.random() * 6,
         rotation: Math.random() * 360,
@@ -120,11 +118,11 @@ export default function LuckyWheelPage() {
     // 上部区域（70-100%）：稀疏分布
     for (let i = 0; i < 10; i++) {
       const yPercent = 0.7 + Math.random() * 0.3 // 70-100%
-      const xPercent = Math.random()
+      const xPercent = Math.random() * 100
       initialCoins.push({
         id: `coin-top-${i}`,
-        x: packetLeft + xPercent * packetWidth,
-        y: packetTop + (1 - yPercent) * packetHeight,
+        x: xPercent,
+        y: 100 - yPercent * 100,
         icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
         size: 6 + Math.random() * 6,
         rotation: Math.random() * 360,
@@ -333,9 +331,9 @@ export default function LuckyWheelPage() {
           <div className="w-10" />
         </div>
 
-        {/* 虚拟币符号层 */}
+        {/* 飞行的虚拟币符号层 - 使用固定定位 */}
         <div className="fixed inset-0 pointer-events-none z-30">
-          {coins.map(coin => {
+          {coins.filter(coin => coin.isFlying).map(coin => {
             const Icon = coin.icon
             return (
               <motion.div
@@ -346,15 +344,11 @@ export default function LuckyWheelPage() {
                   top: coin.y,
                   transform: `translate(-50%, -50%) rotate(${coin.rotation}deg)`,
                 }}
-                animate={isHolding && !coin.isFlying ? {
-                  scale: [1, 1.3, 1],
-                  opacity: [0.8, 1, 0.8],
-                } : coin.isFlying ? {
+                animate={{
                   scale: [1, 1.2, 0.8],
-                } : {}}
+                }}
                 transition={{
                   duration: 0.5,
-                  repeat: isHolding && !coin.isFlying ? Infinity : 0,
                   ease: "easeInOut",
                 }}
               >
@@ -362,11 +356,7 @@ export default function LuckyWheelPage() {
                   size={coin.size}
                   className="text-yellow-400"
                   style={{
-                    filter: isHolding && !coin.isFlying
-                      ? 'drop-shadow(0 0 8px #fbbf24) drop-shadow(0 0 16px #fbbf24)'
-                      : coin.isFlying
-                      ? 'drop-shadow(0 0 6px #fbbf24)'
-                      : 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.5))',
+                    filter: 'drop-shadow(0 0 6px #fbbf24)',
                   }}
                 />
               </motion.div>
@@ -387,6 +377,42 @@ export default function LuckyWheelPage() {
             onTouchEnd={handleEnd}
             onTouchCancel={handleEnd}
           >
+            {/* 虚拟币符号层 - 相对于红包容器 */}
+            <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+              {coins.filter(coin => !coin.isFlying).map(coin => {
+                const Icon = coin.icon
+                return (
+                  <motion.div
+                    key={coin.id}
+                    className="absolute"
+                    style={{
+                      left: `${coin.x}%`,
+                      top: `${coin.y}%`,
+                      transform: `translate(-50%, -50%) rotate(${coin.rotation}deg)`,
+                    }}
+                    animate={isHolding ? {
+                      scale: [1, 1.3, 1],
+                      opacity: [0.8, 1, 0.8],
+                    } : {}}
+                    transition={{
+                      duration: 0.5,
+                      repeat: isHolding ? Infinity : 0,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    <Icon
+                      size={coin.size}
+                      className="text-yellow-400"
+                      style={{
+                        filter: isHolding
+                          ? 'drop-shadow(0 0 8px #fbbf24) drop-shadow(0 0 16px #fbbf24)'
+                          : 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.5))',
+                      }}
+                    />
+                  </motion.div>
+                )
+              })}
+            </div>
             {/* 顶部标签 */}
             <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-20 h-6 bg-gradient-to-b from-amber-100 to-amber-200 rounded-t-lg border-2 border-amber-300/50 shadow-md z-10">
               <div className="absolute inset-0 flex items-center justify-center">
@@ -463,18 +489,21 @@ export default function LuckyWheelPage() {
               <div className="absolute bottom-32 left-0 right-0 h-12 bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 border-y-2 border-amber-600/30 shadow-inner">
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
                 
-                {/* "开"按钮 - 居中在横带上 */}
-                <motion.div
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 z-20"
-                  animate={isHolding ? {
-                    scale: [1, 1.1, 1],
-                  } : {}}
-                  transition={{
-                    duration: 0.5,
-                    repeat: isHolding ? Infinity : 0,
-                    ease: "easeInOut",
-                  }}
-                >
+                {/* "开"按钮 - 居中在横带上，使用transform居中，不受红包动画影响 */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 z-20">
+                  <motion.div
+                    className="w-full h-full"
+                    animate={isHolding ? {
+                      scale: [1, 1.1, 1],
+                    } : {
+                      scale: 1,
+                    }}
+                    transition={{
+                      duration: 0.5,
+                      repeat: isHolding ? Infinity : 0,
+                      ease: "easeInOut",
+                    }}
+                  >
                   <div className="relative w-full h-full">
                     {/* 四叶草形状背景 */}
                     <div
@@ -496,7 +525,8 @@ export default function LuckyWheelPage() {
                       }}
                     />
                   </div>
-                </motion.div>
+                  </motion.div>
+                </div>
               </div>
 
               {/* 进度条 */}
