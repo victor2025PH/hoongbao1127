@@ -423,7 +423,7 @@ export default function LuckyWheelPage() {
 
             {/* 红包主体 */}
             <motion.div
-              className="relative w-72 h-96 rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-72 h-96 rounded-3xl shadow-2xl overflow-visible"
               style={{
                 background: 'linear-gradient(180deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)',
                 boxShadow: isHolding
@@ -443,6 +443,8 @@ export default function LuckyWheelPage() {
               } : {
                 scale: 1,
                 rotate: 0,
+                x: 0,
+                y: 0,
               }}
               transition={{
                 duration: isHolding ? 0.25 : isExploding ? 0.5 : 0.2,
@@ -450,6 +452,7 @@ export default function LuckyWheelPage() {
                 ease: "easeInOut",
               }}
             >
+              <div className="absolute inset-0 overflow-hidden rounded-3xl">
               {/* 光泽效果 */}
               <div
                 className="absolute inset-0"
@@ -490,11 +493,12 @@ export default function LuckyWheelPage() {
               <div className="absolute bottom-32 left-0 right-0 h-12 bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 border-y-2 border-amber-600/30 shadow-inner">
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
               </div>
+              </div>
             </motion.div>
             
-            {/* 星星按钮 - 固定在横带中心，不受红包动画影响，使用fixed定位 */}
+            {/* 星星按钮 - 固定在横带中心，不受红包动画影响 */}
             <div 
-              className="absolute bottom-32 left-1/2 -translate-x-1/2 w-28 h-28 z-30"
+              className="absolute bottom-32 left-1/2 -translate-x-1/2 w-28 h-28 z-30 pointer-events-none"
               style={{
                 marginBottom: '-56px', // 居中在横带上（h-12 = 48px, 按钮高度的一半）
               }}
