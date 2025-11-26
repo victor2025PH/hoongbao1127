@@ -105,10 +105,14 @@ export default function WalletPage() {
   const [blips, setBlips] = useState<{id: number, x: number, y: number, delay: number, scale: number}[]>([])
   const [onlineUsers, setOnlineUsers] = useState(1204)
   const [isRadarScanning, setIsRadarScanning] = useState(false)
+  const [nearbyPacketGroups, setNearbyPacketGroups] = useState(23) // 附近的紅包群數量
+  const [activeGamePlayers, setActiveGamePlayers] = useState(156) // 正在遊戲的人數
 
   useEffect(() => {
     const interval = setInterval(() => {
       setOnlineUsers(prev => prev + Math.floor((Math.random() - 0.5) * 10))
+      setNearbyPacketGroups(prev => Math.max(0, prev + Math.floor((Math.random() - 0.5) * 3)))
+      setActiveGamePlayers(prev => Math.max(0, prev + Math.floor((Math.random() - 0.5) * 5)))
     }, 2000)
     return () => clearInterval(interval)
   }, [])
@@ -187,7 +191,18 @@ export default function WalletPage() {
 
   return (
     <PageTransition>
-      <div className="h-full w-full flex flex-col pb-24 gap-2 overflow-y-auto scrollbar-hide">
+      {/* 全局邊框發光效果（掃描時） */}
+      <div className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
+        isRadarScanning ? 'opacity-100' : 'opacity-0'
+      }`}>
+        <div className="absolute inset-0 border-2 border-cyan-500/30 rounded-3xl m-2 shadow-[0_0_30px_rgba(6,182,212,0.5)]" />
+        <div className="absolute inset-0 border-2 border-purple-500/30 rounded-3xl m-3 shadow-[0_0_30px_rgba(168,85,247,0.5)]" />
+        <div className="absolute inset-0 border-2 border-emerald-500/30 rounded-3xl m-4 shadow-[0_0_30px_rgba(16,185,129,0.5)]" />
+      </div>
+      
+      <div className={`h-full w-full flex flex-col pb-24 gap-2 overflow-y-auto scrollbar-hide transition-all duration-500 ${
+        isRadarScanning ? '[&>*]:border-cyan-500/50 [&>*]:shadow-[0_0_20px_rgba(6,182,212,0.3)]' : ''
+      }`}>
         {/* 總資產頭部（僅在首頁顯示） */}
         <AssetHeader />
         
@@ -357,40 +372,9 @@ export default function WalletPage() {
           </button>
         </button>
 
-        {/* 總資產和雷達掃描器（並排） */}
-        <div className="flex flex-row gap-2 flex-1 min-h-0">
-          {/* 總資產卡片 */}
-          <div className="relative flex-1 bg-gradient-to-br from-cyan-900/20 via-[#1C1C1E] to-blue-900/20 border border-cyan-500/20 rounded-3xl overflow-hidden flex flex-col items-center justify-center shadow-lg group active:scale-[0.98] transition-all">
-            <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-cyan-500/10 to-transparent opacity-60" />
-            <div className="z-10 flex flex-col items-center gap-1 mb-2">
-              <span className="text-cyan-300/60 text-[9px] font-bold uppercase tracking-[0.15em] flex items-center gap-1">
-                <Wallet size={10} /> {t('total_assets')}
-              </span>
-              <span className="text-2xl font-black text-white tracking-tighter drop-shadow-md">
-                {balance?.usdt?.toFixed(2) ?? '0.00'}
-              </span>
-              <div className="bg-[#0f0f11]/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-cyan-500/20 flex items-center gap-1 shadow-sm mt-1">
-                <motion.div
-                  className="w-1.5 h-1.5 rounded-full bg-cyan-400"
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                />
-                <span className="text-cyan-200 text-[8px] font-bold">Stars</span>
-              </div>
-            </div>
-            <div className="absolute bottom-0 left-0 w-full h-1 bg-cyan-500/20">
-              <motion.div
-                className="h-full bg-cyan-500 shadow-[0_0_10px_cyan]"
-                initial={{ width: '0%' }}
-                animate={{ width: '45%' }}
-                transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
-              />
-            </div>
-          </div>
-
-          {/* 雷達掃描器 */}
-          <motion.div
-            className="relative flex-[1.5] bg-[#1C1C1E] border border-emerald-500/20 rounded-3xl overflow-hidden flex flex-col items-center justify-center shadow-lg group cursor-grab active:cursor-grabbing"
+        {/* 雷達掃描器（全寬） */}
+        <motion.div
+          className="relative w-full flex-1 min-h-[300px] bg-[#1C1C1E] border border-emerald-500/20 rounded-3xl overflow-hidden flex flex-col items-center justify-center shadow-lg group cursor-grab active:cursor-grabbing transition-all duration-500"
             onPan={handleRadarDrag}
             onContextMenu={(e) => e.preventDefault()}
             onPointerDown={startRadarScan}
@@ -398,81 +382,235 @@ export default function WalletPage() {
             onPointerLeave={endRadarScan}
             style={{ touchAction: 'none' }}
           >
-            {/* 技術網格背景 */}
-            <div className="absolute inset-0 bg-[linear-gradient(transparent_19px,#10b981_1px),linear-gradient(90deg,transparent_19px,#10b981_1px)] bg-[size:24px_24px] opacity-[0.05]" />
-            <div className="absolute inset-0 bg-gradient-to-b from-emerald-900/10 to-transparent" />
+            {/* 技術網格背景（增強科技感） */}
+            <div className="absolute inset-0 bg-[linear-gradient(transparent_19px,#00ff88_1px),linear-gradient(90deg,transparent_19px,#00ff88_1px)] bg-[size:24px_24px] opacity-[0.08]" />
+            <div className="absolute inset-0 bg-[linear-gradient(transparent_38px,#00d9ff_0.5px),linear-gradient(90deg,transparent_38px,#00d9ff_0.5px)] bg-[size:48px_48px] opacity-[0.05]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-emerald-900/20 via-cyan-900/10 to-purple-900/20" />
             
-            {/* 掃描光效 */}
-            <div className={`absolute inset-0 transition-opacity duration-300 ${isRadarScanning ? 'opacity-30 bg-emerald-500/30' : 'opacity-0'}`} />
+            {/* 掃描光效（多層次） */}
+            <motion.div 
+              className="absolute inset-0"
+              animate={isRadarScanning ? {
+                background: [
+                  'radial-gradient(circle at 50% 50%, rgba(0,255,136,0.2) 0%, transparent 70%)',
+                  'radial-gradient(circle at 50% 50%, rgba(0,217,255,0.2) 0%, transparent 70%)',
+                  'radial-gradient(circle at 50% 50%, rgba(168,85,247,0.2) 0%, transparent 70%)',
+                  'radial-gradient(circle at 50% 50%, rgba(0,255,136,0.2) 0%, transparent 70%)',
+                ]
+              } : {}}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            
+            {/* 脈衝光環 */}
+            {isRadarScanning && (
+              <>
+                <motion.div
+                  className="absolute inset-0 border-2 border-emerald-400 rounded-3xl"
+                  animate={{
+                    scale: [1, 1.05, 1],
+                    opacity: [0.3, 0.6, 0.3],
+                  }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+                <motion.div
+                  className="absolute inset-0 border-2 border-cyan-400 rounded-3xl"
+                  animate={{
+                    scale: [1, 1.08, 1],
+                    opacity: [0.2, 0.5, 0.2],
+                  }}
+                  transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
+                />
+              </>
+            )}
 
-            <div className="relative z-10 w-20 h-20 flex items-center justify-center mb-2">
+            <div className="relative z-10 w-32 h-32 flex items-center justify-center mb-4">
+              {/* 外層光環（科技感） */}
+              <motion.div
+                className="absolute inset-0 rounded-full border border-cyan-400/30"
+                animate={isRadarScanning ? {
+                  rotate: 360,
+                  scale: [1, 1.1, 1]
+                } : {}}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              />
+              
               {/* 雷達外環 */}
               <motion.div
                 className={`absolute inset-0 rounded-full border-2 border-dashed transition-colors duration-300 ${
-                  isLocked ? 'border-white' : isRadarScanning ? 'border-emerald-400' : 'border-emerald-500/30'
+                  isLocked ? 'border-white shadow-[0_0_20px_white]' : isRadarScanning ? 'border-emerald-400 shadow-[0_0_15px_#10b981]' : 'border-emerald-500/30'
                 }`}
                 style={{ rotate: rotation }}
                 animate={isRadarScanning ? { rotate: 360 } : {}}
                 transition={isRadarScanning ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
               >
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_5px_lime]" />
+                <motion.div
+                  className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_10px_lime]"
+                  animate={isRadarScanning ? {
+                    boxShadow: [
+                      '0 0 5px #10b981',
+                      '0 0 20px #10b981',
+                      '0 0 5px #10b981',
+                    ]
+                  } : {}}
+                  transition={{ duration: 1, repeat: Infinity }}
+                />
               </motion.div>
+              
+              {/* 中層環 */}
+              <motion.div
+                className="absolute inset-4 rounded-full border border-cyan-500/20"
+                animate={isRadarScanning ? {
+                  rotate: -360,
+                  opacity: [0.3, 0.7, 0.3]
+                } : {}}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              />
 
-              {/* 雷達掃描效果 */}
-              <div className="absolute inset-2 rounded-full border border-emerald-500/20 overflow-hidden bg-[#0f0f11]">
-                <div className="absolute inset-0 rounded-full border border-emerald-500/10" />
-                {/* 旋轉光束 */}
+              {/* 雷達掃描效果（增強科技感） */}
+              <div className="absolute inset-4 rounded-full border border-emerald-500/20 overflow-hidden bg-[#0f0f11]">
+                <div className="absolute inset-0 rounded-full border border-cyan-500/10" />
+                
+                {/* 多層旋轉光束（科技感） */}
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: isRadarScanning ? 0.5 : 2, repeat: Infinity, ease: "linear" }}
                   className="absolute inset-0 rounded-full"
                   style={{
-                    background: 'conic-gradient(from 0deg, transparent 0deg, rgba(16,185,129,0.5) 360deg)'
+                    background: 'conic-gradient(from 0deg, transparent 0deg, rgba(0,255,136,0.6) 90deg, rgba(0,217,255,0.6) 180deg, rgba(168,85,247,0.6) 270deg, transparent 360deg)'
                   }}
                 />
                 
-                {/* 信號點 */}
+                {/* 第二層光束 */}
+                <motion.div
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: isRadarScanning ? 0.8 : 3, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0 rounded-full opacity-50"
+                  style={{
+                    background: 'conic-gradient(from 180deg, transparent 0deg, rgba(0,217,255,0.4) 90deg, rgba(168,85,247,0.4) 180deg, transparent 270deg)'
+                  }}
+                />
+                
+                {/* 中心脈衝 */}
+                <motion.div
+                  className="absolute inset-1/4 rounded-full border border-cyan-400/30"
+                  animate={isRadarScanning ? {
+                    scale: [1, 1.5, 1],
+                    opacity: [0.3, 0.7, 0.3]
+                  } : {}}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                />
+                
+                {/* 信號點（增強科技感） */}
                 <AnimatePresence>
                   {blips.map(b => (
                     <motion.div
                       key={b.id}
                       initial={{ opacity: 0, scale: 0 }}
-                      animate={{ opacity: [0, 1, 0], scale: 1 }}
+                      animate={{ 
+                        opacity: [0, 1, 0.8, 0], 
+                        scale: [0, 1.2, 1, 0.8],
+                      }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 1.5, repeat: Infinity, delay: b.delay }}
-                      className="absolute w-1.5 h-1.5 bg-yellow-300 rounded-full shadow-[0_0_4px_gold] z-10"
+                      className="absolute z-10"
                       style={{
                         left: `calc(50% + ${b.x}px)`,
                         top: `calc(50% + ${b.y}px)`
                       }}
-                    />
+                    >
+                      <div className="w-2 h-2 bg-gradient-to-br from-yellow-300 to-orange-400 rounded-full shadow-[0_0_8px_#fbbf24]" />
+                      <motion.div
+                        className="absolute inset-0 rounded-full border border-yellow-300/50"
+                        animate={{
+                          scale: [1, 2, 1],
+                          opacity: [0.8, 0, 0.8]
+                        }}
+                        transition={{ duration: 1.5, repeat: Infinity, delay: b.delay }}
+                      />
+                    </motion.div>
                   ))}
                 </AnimatePresence>
               </div>
 
-              {/* 中心圖標 */}
+              {/* 中心圖標（增強科技感） */}
               <div className="absolute z-20 pointer-events-none">
                 {isLocked ? (
-                  <Target size={20} className="text-white animate-ping" />
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      rotate: [0, 180, 360]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Target size={24} className="text-white drop-shadow-[0_0_10px_white]" />
+                  </motion.div>
                 ) : (
-                  <Wifi size={20} className={`text-emerald-500/50 ${isRadarScanning && 'text-emerald-400 animate-pulse'}`} />
+                  <motion.div
+                    animate={isRadarScanning ? {
+                      scale: [1, 1.1, 1],
+                      opacity: [0.7, 1, 0.7]
+                    } : {}}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <Wifi size={24} className={`${isRadarScanning ? 'text-cyan-400' : 'text-emerald-500/50'} drop-shadow-[0_0_8px_currentColor]`} />
+                  </motion.div>
                 )}
               </div>
             </div>
 
-            <div className="mt-0 text-center z-10 select-none">
-              <span className={`text-[8px] font-bold uppercase tracking-widest block mb-0.5 ${
-                isLocked ? 'text-white' : 'text-emerald-500/70'
+            <div className="mt-2 text-center z-10 select-none space-y-2">
+              <span className={`text-[10px] font-bold uppercase tracking-widest block ${
+                isLocked ? 'text-white' : isRadarScanning ? 'text-cyan-400' : 'text-emerald-500/70'
               }`}>
-                {isLocked ? '目標鎖定' : isRadarScanning ? '掃描中...' : '被動掃描'}
+                {isLocked ? '目標鎖定' : isRadarScanning ? '主動掃描中...' : '被動掃描'}
               </span>
               
-              {/* 在線用戶計數 */}
-              <div className="flex items-center justify-center gap-1.5 bg-black/20 px-2 py-0.5 rounded-full border border-white/5">
-                <div className={`w-1.5 h-1.5 rounded-full ${isLocked ? 'bg-white animate-pulse' : 'bg-emerald-500'}`} />
-                <span className="text-[10px] font-mono font-bold text-emerald-100">
-                  {onlineUsers} 附近
-                </span>
+              {/* 統計信息（附近的紅包群和遊戲人數） */}
+              <div className="flex flex-col gap-2">
+                {/* 在線用戶計數 */}
+                <div className="flex items-center justify-center gap-1.5 bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full border border-emerald-500/20">
+                  <motion.div
+                    className={`w-2 h-2 rounded-full ${isLocked ? 'bg-white' : 'bg-emerald-500'}`}
+                    animate={isRadarScanning ? {
+                      scale: [1, 1.3, 1],
+                      opacity: [0.7, 1, 0.7]
+                    } : {}}
+                    transition={{ duration: 1, repeat: Infinity }}
+                  />
+                  <span className="text-[11px] font-mono font-bold text-emerald-100">
+                    {onlineUsers} 在線
+                  </span>
+                </div>
+                
+                {/* 附近的紅包群 */}
+                <div className="flex items-center justify-center gap-1.5 bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full border border-cyan-500/20">
+                  <motion.div
+                    className="w-2 h-2 rounded-full bg-cyan-400"
+                    animate={isRadarScanning ? {
+                      scale: [1, 1.3, 1],
+                      opacity: [0.7, 1, 0.7]
+                    } : {}}
+                    transition={{ duration: 1.2, repeat: Infinity, delay: 0.3 }}
+                  />
+                  <span className="text-[11px] font-mono font-bold text-cyan-100">
+                    {nearbyPacketGroups} 紅包群
+                  </span>
+                </div>
+                
+                {/* 正在遊戲的人數 */}
+                <div className="flex items-center justify-center gap-1.5 bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full border border-purple-500/20">
+                  <motion.div
+                    className="w-2 h-2 rounded-full bg-purple-400"
+                    animate={isRadarScanning ? {
+                      scale: [1, 1.3, 1],
+                      opacity: [0.7, 1, 0.7]
+                    } : {}}
+                    transition={{ duration: 1.4, repeat: Infinity, delay: 0.6 }}
+                  />
+                  <span className="text-[11px] font-mono font-bold text-purple-100">
+                    {activeGamePlayers} 遊戲中
+                  </span>
+                </div>
               </div>
             </div>
             
@@ -483,17 +621,28 @@ export default function WalletPage() {
               </div>
             )}
 
-            {/* 進度條 */}
-            <div className="absolute bottom-0 left-0 w-full h-1 bg-emerald-900/30">
+            {/* 進度條（增強科技感） */}
+            <div className="absolute bottom-0 left-0 w-full h-1.5 bg-emerald-900/30 overflow-hidden">
               <motion.div
-                className={`h-full shadow-[0_0_10px_lime] ${isLocked ? 'bg-white' : 'bg-emerald-500'}`}
+                className={`h-full shadow-[0_0_15px_currentColor] ${
+                  isLocked 
+                    ? 'bg-gradient-to-r from-white via-cyan-300 to-white' 
+                    : 'bg-gradient-to-r from-emerald-500 via-cyan-400 to-emerald-500'
+                }`}
                 initial={{ width: '0%' }}
                 animate={{ width: `${signalStrength}%` }}
                 transition={{ duration: 0.2 }}
-              />
+              >
+                <motion.div
+                  className="absolute inset-0 bg-white/30"
+                  animate={isRadarScanning ? {
+                    x: ['-100%', '100%']
+                  } : {}}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                />
+              </motion.div>
             </div>
           </motion.div>
-        </div>
 
         {/* 用戶等級 */}
         {profile && (
