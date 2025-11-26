@@ -173,7 +173,7 @@ export default function WalletPage() {
   const handleRadarClick = () => {
     // 检查能量和幸运值
     if (energy < 10 || fortune < 10) {
-      playSound('error')
+      playSound('notification')
       return
     }
 
