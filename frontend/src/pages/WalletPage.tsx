@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Minus, Gift, Clock, Users, ChevronRight, Send, Gamepad2, TrendingUp, Target, Wifi, Wallet, Trophy, Sparkles } from 'lucide-react'
+import { Plus, Minus, Gift, Clock, Users, ChevronRight, Send, Gamepad2, TrendingUp, Target, Wifi, Wallet } from 'lucide-react'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { useTranslation } from '../providers/I18nProvider'
 import { getBalance, getUserProfile } from '../utils/api'
