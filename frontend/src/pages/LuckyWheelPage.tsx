@@ -366,11 +366,11 @@ export default function LuckyWheelPage() {
         </div>
 
         {/* 主要内容区域 */}
-        <div className="flex-1 flex flex-col items-center justify-start gap-4 p-4 min-h-0 pt-8">
+        <div className="flex-1 flex flex-col items-center justify-start gap-4 p-4 min-h-0 pt-8 relative">
           {/* 大红包 */}
           <div
             ref={redPacketRef}
-            className="relative shrink-0"
+            className="relative shrink-0 w-72 h-96"
             onMouseDown={handleStart}
             onMouseUp={handleEnd}
             onMouseLeave={handleEnd}
@@ -496,13 +496,15 @@ export default function LuckyWheelPage() {
               </div>
             </motion.div>
             
-            {/* 星星按钮 - 固定在横带中心，不受红包动画影响 */}
-            <div 
-              className="absolute bottom-32 left-1/2 -translate-x-1/2 w-28 h-28 z-30 pointer-events-none"
-              style={{
-                marginBottom: '-56px', // 居中在横带上（h-12 = 48px, 按钮高度的一半）
-              }}
-            >
+          {/* 星星按钮 - 固定在横带中心，不受红包动画影响，相对于父容器定位 */}
+          <div 
+            className="absolute w-28 h-28 z-30 pointer-events-none"
+            style={{
+              bottom: 'calc(50% - 48px)', // 横带位置（bottom-32 = 128px，从底部算起，横带中心在 128px + 24px = 152px，按钮中心应该在 152px）
+              left: '50%',
+              transform: 'translateX(-50%)',
+            }}
+          >
               <motion.div
                 className="w-full h-full flex items-center justify-center"
                 animate={isHolding ? {
