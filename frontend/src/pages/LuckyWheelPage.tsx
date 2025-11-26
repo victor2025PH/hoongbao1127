@@ -329,10 +329,12 @@ export default function LuckyWheelPage() {
                     animate={isHolding ? {
                       scale: [1, 1.3, 1],
                       opacity: [0.8, 1, 0.8],
-                    } : {}}
+                    } : {
+                      opacity: [0.8, 1, 0.8],
+                    }}
                     transition={{
                       duration: 0.5,
-                      repeat: isHolding ? Infinity : 0,
+                      repeat: Infinity,
                       ease: "easeInOut",
                     }}
                   >
@@ -342,7 +344,7 @@ export default function LuckyWheelPage() {
                       style={{
                         filter: isHolding
                           ? 'drop-shadow(0 0 8px #fbbf24) drop-shadow(0 0 16px #fbbf24)'
-                          : 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.5))',
+                          : 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.5)) drop-shadow(0 0 8px rgba(251, 191, 36, 0.3))',
                       }}
                     />
                   </motion.div>
