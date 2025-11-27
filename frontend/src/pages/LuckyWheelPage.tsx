@@ -399,11 +399,11 @@ export default function LuckyWheelPage() {
               </div>
             </motion.div>
             
-          {/* 盾牌形状底座 + 大星星 - 完美融合 */}
+          {/* 美国队长风格圆形盾牌 + 星星 */}
           <div 
-            className="absolute w-24 h-24 z-30 pointer-events-none"
+            className="absolute w-32 h-32 z-30 pointer-events-none"
             style={{
-              top: '12%',
+              top: '8%',
               left: '50%',
               transform: 'translateX(-50%)',
             }}
@@ -411,141 +411,148 @@ export default function LuckyWheelPage() {
               <motion.div
                 className="w-full h-full flex items-center justify-center"
                 animate={isHolding ? {
-                  scale: [1, 1.12, 1],
+                  scale: [1, 1.15, 1],
+                  rotate: [0, 5, -5, 0],
                 } : {
-                  scale: 1,
+                  scale: [1, 1.02, 1],
                 }}
                 transition={{
-                  duration: 0.5,
-                  repeat: isHolding ? Infinity : 0,
+                  duration: isHolding ? 0.3 : 3,
+                  repeat: Infinity,
                   ease: "easeInOut",
                 }}
                 style={{
                   transformOrigin: 'center center',
+                  filter: isHolding 
+                    ? 'drop-shadow(0 0 20px #fbbf24) drop-shadow(0 0 40px #dc2626)'
+                    : 'drop-shadow(0 0 10px rgba(251, 191, 36, 0.6)) drop-shadow(0 0 20px rgba(220, 38, 38, 0.4))',
                 }}
               >
-                <div className="relative w-full h-full flex items-center justify-center">
-                  {/* 盾牌 3D 立体底座 */}
-                  
-                  {/* 最底层投影 */}
+                <div className="relative w-full h-full">
+                  {/* 盾牌阴影 */}
                   <div
-                    className="absolute"
+                    className="absolute rounded-full"
                     style={{
                       width: '100%',
                       height: '100%',
-                      top: '8%',
-                      clipPath: 'polygon(50% 0%, 100% 20%, 100% 65%, 50% 100%, 0% 65%, 0% 20%)',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      filter: 'blur(6px)',
-                    }}
-                  />
-                  
-                  {/* 盾牌外框 - 深色边缘 */}
-                  <div
-                    className="absolute"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      clipPath: 'polygon(50% 0%, 100% 20%, 100% 65%, 50% 100%, 0% 65%, 0% 20%)',
-                      background: 'linear-gradient(180deg, #78350f 0%, #451a03 100%)',
-                    }}
-                  />
-                  
-                  {/* 盾牌主体 - 金色渐变 */}
-                  <div
-                    className="absolute"
-                    style={{
-                      width: '92%',
-                      height: '92%',
-                      top: '4%',
-                      left: '4%',
-                      clipPath: 'polygon(50% 0%, 100% 20%, 100% 65%, 50% 100%, 0% 65%, 0% 20%)',
-                      background: 'linear-gradient(165deg, #fde68a 0%, #fbbf24 25%, #f59e0b 50%, #d97706 75%, #b45309 100%)',
-                      filter: isHolding 
-                        ? 'drop-shadow(0 0 12px #fbbf24) drop-shadow(0 0 24px #f59e0b)'
-                        : 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.5))',
-                    }}
-                  />
-                  
-                  {/* 盾牌凹陷区域 - 星星的背景 */}
-                  <div
-                    className="absolute"
-                    style={{
-                      width: '72%',
-                      height: '72%',
-                      top: '14%',
-                      left: '14%',
-                      clipPath: 'polygon(50% 2%, 98% 20%, 98% 62%, 50% 98%, 2% 62%, 2% 20%)',
-                      background: 'linear-gradient(180deg, #d97706 0%, #b45309 40%, #92400e 100%)',
-                    }}
-                  />
-                  
-                  {/* 顶部高光 */}
-                  <div
-                    className="absolute"
-                    style={{
-                      width: '45%',
-                      height: '18%',
                       top: '6%',
-                      left: '20%',
-                      background: 'linear-gradient(180deg, rgba(255,255,255,0.5) 0%, transparent 100%)',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      filter: 'blur(8px)',
+                    }}
+                  />
+                  
+                  {/* 最外层 - 红色环 */}
+                  <div
+                    className="absolute rounded-full"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(160deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
+                      boxShadow: 'inset 0 -4px 8px rgba(0, 0, 0, 0.3), inset 0 4px 8px rgba(255, 255, 255, 0.2)',
+                    }}
+                  />
+                  
+                  {/* 第二层 - 白色环 */}
+                  <div
+                    className="absolute rounded-full"
+                    style={{
+                      width: '80%',
+                      height: '80%',
+                      top: '10%',
+                      left: '10%',
+                      background: 'linear-gradient(160deg, #ffffff 0%, #f3f4f6 50%, #e5e7eb 100%)',
+                      boxShadow: 'inset 0 -3px 6px rgba(0, 0, 0, 0.15), inset 0 3px 6px rgba(255, 255, 255, 0.8)',
+                    }}
+                  />
+                  
+                  {/* 第三层 - 红色环 */}
+                  <div
+                    className="absolute rounded-full"
+                    style={{
+                      width: '62%',
+                      height: '62%',
+                      top: '19%',
+                      left: '19%',
+                      background: 'linear-gradient(160deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
+                      boxShadow: 'inset 0 -3px 6px rgba(0, 0, 0, 0.3), inset 0 3px 6px rgba(255, 255, 255, 0.2)',
+                    }}
+                  />
+                  
+                  {/* 中心 - 金色/蓝色圆形 */}
+                  <div
+                    className="absolute rounded-full"
+                    style={{
+                      width: '44%',
+                      height: '44%',
+                      top: '28%',
+                      left: '28%',
+                      background: 'linear-gradient(160deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
+                      boxShadow: 'inset 0 -3px 6px rgba(0, 0, 0, 0.3), inset 0 3px 6px rgba(255, 255, 255, 0.3)',
+                    }}
+                  />
+                  
+                  {/* 高光效果 */}
+                  <div
+                    className="absolute"
+                    style={{
+                      width: '40%',
+                      height: '25%',
+                      top: '8%',
+                      left: '15%',
+                      background: 'linear-gradient(180deg, rgba(255,255,255,0.6) 0%, transparent 100%)',
                       borderRadius: '50%',
-                      filter: 'blur(1px)',
+                      filter: 'blur(2px)',
                     }}
                   />
 
-                  {/* 星星 - 和右上角完全一样，完美嵌入盾牌内部 */}
+                  {/* 中心星星 */}
                   <div 
                     className="absolute flex items-center justify-center z-10"
                     style={{
-                      width: '55%',
-                      height: '55%',
-                      top: '22%',
-                      left: '22.5%',
+                      width: '100%',
+                      height: '100%',
                     }}
                   >
                     <motion.div
                       animate={isHolding ? {
-                        rotate: [0, 5, -5, 0],
-                        scale: [1, 1.1, 1],
+                        rotate: [0, 10, -10, 0],
+                        scale: [1, 1.15, 1],
                       } : {
-                        scale: [1, 1.02, 1],
+                        scale: [1, 1.05, 1],
                       }}
                       transition={{
-                        duration: isHolding ? 0.25 : 2.5,
+                        duration: isHolding ? 0.2 : 2,
                         repeat: Infinity,
                         ease: "easeInOut",
                       }}
                       style={{
                         filter: isHolding 
-                          ? 'drop-shadow(0 0 10px #ffd700) drop-shadow(0 0 20px #fbbf24)'
-                          : 'drop-shadow(0 0 4px rgba(255, 215, 0, 0.6))',
+                          ? 'drop-shadow(0 0 12px #ffd700) drop-shadow(0 0 24px #fbbf24)'
+                          : 'drop-shadow(0 0 6px rgba(255, 215, 0, 0.8))',
                       }}
                     >
                       <TelegramStar 
-                        size={40} 
+                        size={48} 
                         withSpray={isHolding}
                       />
                     </motion.div>
                   </div>
                   
-                  {/* 按下时的内部发光 */}
+                  {/* 按下时的脉冲发光 */}
                   {isHolding && (
                     <motion.div
-                      className="absolute"
+                      className="absolute rounded-full"
                       style={{
-                        width: '72%',
-                        height: '72%',
-                        top: '14%',
-                        left: '14%',
-                        clipPath: 'polygon(50% 2%, 98% 20%, 98% 62%, 50% 98%, 2% 62%, 2% 20%)',
-                        background: 'radial-gradient(circle, rgba(255,215,0,0.4) 0%, transparent 70%)',
+                        width: '100%',
+                        height: '100%',
+                        background: 'radial-gradient(circle, rgba(255,215,0,0.4) 0%, rgba(220,38,38,0.2) 50%, transparent 70%)',
                       }}
                       animate={{
-                        opacity: [0.3, 0.7, 0.3],
+                        opacity: [0.3, 0.8, 0.3],
+                        scale: [1, 1.1, 1],
                       }}
                       transition={{
-                        duration: 0.35,
+                        duration: 0.3,
                         repeat: Infinity,
                       }}
                     />
