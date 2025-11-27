@@ -367,9 +367,28 @@ export default function LuckyWheelPage() {
                   }}
                 />
 
-                {/* 金色横带 */}
-                <div className="absolute bottom-32 left-0 right-0 h-12 bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 border-y-2 border-amber-600/30 shadow-inner">
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+                {/* 星条旗风格横带 */}
+                <div className="absolute bottom-32 left-0 right-0 h-14 overflow-hidden">
+                  {/* 条纹背景 */}
+                  <div className="absolute inset-0 flex flex-col">
+                    <div className="flex-1 bg-gradient-to-b from-red-500 to-red-600" />
+                    <div className="flex-1 bg-gradient-to-b from-white to-gray-100" />
+                    <div className="flex-1 bg-gradient-to-b from-red-500 to-red-600" />
+                    <div className="flex-1 bg-gradient-to-b from-white to-gray-100" />
+                    <div className="flex-1 bg-gradient-to-b from-red-500 to-red-600" />
+                  </div>
+                  {/* 左侧蓝色星区 */}
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1/3 bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center gap-1 flex-wrap p-1"
+                  >
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <svg key={i} viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-white">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                    ))}
+                  </div>
+                  {/* 立体阴影 */}
+                  <div className="absolute inset-0 shadow-inner" style={{ boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2), inset 0 -2px 4px rgba(0,0,0,0.1)' }} />
                 </div>
 
                 {/* 进度条 */}
@@ -399,11 +418,11 @@ export default function LuckyWheelPage() {
               </div>
             </motion.div>
             
-          {/* 美国队长风格圆形盾牌 + 星星 */}
+          {/* 美国队长风格圆形盾牌 */}
           <div 
-            className="absolute w-32 h-32 z-30 pointer-events-none"
+            className="absolute w-36 h-36 z-30 pointer-events-none"
             style={{
-              top: '8%',
+              top: '5%',
               left: '50%',
               transform: 'translateX(-50%)',
             }}
@@ -411,8 +430,8 @@ export default function LuckyWheelPage() {
               <motion.div
                 className="w-full h-full flex items-center justify-center"
                 animate={isHolding ? {
-                  scale: [1, 1.15, 1],
-                  rotate: [0, 5, -5, 0],
+                  scale: [1, 1.12, 1],
+                  rotate: [0, 3, -3, 0],
                 } : {
                   scale: [1, 1.02, 1],
                 }}
@@ -424,8 +443,8 @@ export default function LuckyWheelPage() {
                 style={{
                   transformOrigin: 'center center',
                   filter: isHolding 
-                    ? 'drop-shadow(0 0 20px #fbbf24) drop-shadow(0 0 40px #dc2626)'
-                    : 'drop-shadow(0 0 10px rgba(251, 191, 36, 0.6)) drop-shadow(0 0 20px rgba(220, 38, 38, 0.4))',
+                    ? 'drop-shadow(0 0 24px rgba(220, 38, 38, 0.8)) drop-shadow(0 0 48px rgba(59, 130, 246, 0.6))'
+                    : 'drop-shadow(0 0 12px rgba(220, 38, 38, 0.5)) drop-shadow(0 0 24px rgba(59, 130, 246, 0.3))',
                 }}
               >
                 <div className="relative w-full h-full">
@@ -435,9 +454,9 @@ export default function LuckyWheelPage() {
                     style={{
                       width: '100%',
                       height: '100%',
-                      top: '6%',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      filter: 'blur(8px)',
+                      top: '5%',
+                      background: 'rgba(0, 0, 0, 0.5)',
+                      filter: 'blur(10px)',
                     }}
                   />
                   
@@ -447,8 +466,8 @@ export default function LuckyWheelPage() {
                     style={{
                       width: '100%',
                       height: '100%',
-                      background: 'linear-gradient(160deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
-                      boxShadow: 'inset 0 -4px 8px rgba(0, 0, 0, 0.3), inset 0 4px 8px rgba(255, 255, 255, 0.2)',
+                      background: 'linear-gradient(150deg, #ef4444 0%, #dc2626 40%, #b91c1c 100%)',
+                      boxShadow: 'inset 0 -6px 12px rgba(0, 0, 0, 0.4), inset 0 6px 12px rgba(255, 255, 255, 0.25)',
                     }}
                   />
                   
@@ -456,12 +475,12 @@ export default function LuckyWheelPage() {
                   <div
                     className="absolute rounded-full"
                     style={{
-                      width: '80%',
-                      height: '80%',
-                      top: '10%',
-                      left: '10%',
-                      background: 'linear-gradient(160deg, #ffffff 0%, #f3f4f6 50%, #e5e7eb 100%)',
-                      boxShadow: 'inset 0 -3px 6px rgba(0, 0, 0, 0.15), inset 0 3px 6px rgba(255, 255, 255, 0.8)',
+                      width: '78%',
+                      height: '78%',
+                      top: '11%',
+                      left: '11%',
+                      background: 'linear-gradient(150deg, #ffffff 0%, #f8fafc 40%, #e2e8f0 100%)',
+                      boxShadow: 'inset 0 -4px 8px rgba(0, 0, 0, 0.12), inset 0 4px 8px rgba(255, 255, 255, 1)',
                     }}
                   />
                   
@@ -469,43 +488,43 @@ export default function LuckyWheelPage() {
                   <div
                     className="absolute rounded-full"
                     style={{
-                      width: '62%',
-                      height: '62%',
-                      top: '19%',
-                      left: '19%',
-                      background: 'linear-gradient(160deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
-                      boxShadow: 'inset 0 -3px 6px rgba(0, 0, 0, 0.3), inset 0 3px 6px rgba(255, 255, 255, 0.2)',
+                      width: '58%',
+                      height: '58%',
+                      top: '21%',
+                      left: '21%',
+                      background: 'linear-gradient(150deg, #ef4444 0%, #dc2626 40%, #b91c1c 100%)',
+                      boxShadow: 'inset 0 -4px 8px rgba(0, 0, 0, 0.35), inset 0 4px 8px rgba(255, 255, 255, 0.2)',
                     }}
                   />
                   
-                  {/* 中心 - 金色/蓝色圆形 */}
+                  {/* 中心 - 蓝色圆形 */}
                   <div
                     className="absolute rounded-full"
                     style={{
-                      width: '44%',
-                      height: '44%',
-                      top: '28%',
-                      left: '28%',
-                      background: 'linear-gradient(160deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
-                      boxShadow: 'inset 0 -3px 6px rgba(0, 0, 0, 0.3), inset 0 3px 6px rgba(255, 255, 255, 0.3)',
+                      width: '40%',
+                      height: '40%',
+                      top: '30%',
+                      left: '30%',
+                      background: 'linear-gradient(150deg, #3b82f6 0%, #2563eb 40%, #1d4ed8 100%)',
+                      boxShadow: 'inset 0 -4px 8px rgba(0, 0, 0, 0.35), inset 0 4px 8px rgba(255, 255, 255, 0.25)',
                     }}
                   />
                   
-                  {/* 高光效果 */}
+                  {/* 高光效果 - 左上角 */}
                   <div
                     className="absolute"
                     style={{
-                      width: '40%',
-                      height: '25%',
-                      top: '8%',
-                      left: '15%',
-                      background: 'linear-gradient(180deg, rgba(255,255,255,0.6) 0%, transparent 100%)',
+                      width: '45%',
+                      height: '30%',
+                      top: '6%',
+                      left: '12%',
+                      background: 'linear-gradient(180deg, rgba(255,255,255,0.7) 0%, transparent 100%)',
                       borderRadius: '50%',
-                      filter: 'blur(2px)',
+                      filter: 'blur(3px)',
                     }}
                   />
 
-                  {/* 中心星星 */}
+                  {/* 中心白色五角星 - 无边框 */}
                   <div 
                     className="absolute flex items-center justify-center z-10"
                     style={{
@@ -515,26 +534,31 @@ export default function LuckyWheelPage() {
                   >
                     <motion.div
                       animate={isHolding ? {
-                        rotate: [0, 10, -10, 0],
-                        scale: [1, 1.15, 1],
+                        rotate: [0, 8, -8, 0],
+                        scale: [1, 1.1, 1],
                       } : {
-                        scale: [1, 1.05, 1],
+                        scale: [1, 1.03, 1],
                       }}
                       transition={{
-                        duration: isHolding ? 0.2 : 2,
+                        duration: isHolding ? 0.25 : 2.5,
                         repeat: Infinity,
                         ease: "easeInOut",
                       }}
-                      style={{
-                        filter: isHolding 
-                          ? 'drop-shadow(0 0 12px #ffd700) drop-shadow(0 0 24px #fbbf24)'
-                          : 'drop-shadow(0 0 6px rgba(255, 215, 0, 0.8))',
-                      }}
                     >
-                      <TelegramStar 
-                        size={48} 
-                        withSpray={isHolding}
-                      />
+                      <svg 
+                        viewBox="0 0 24 24" 
+                        className="w-10 h-10"
+                        style={{
+                          filter: isHolding 
+                            ? 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.6))'
+                            : 'drop-shadow(0 0 4px rgba(255, 255, 255, 0.7))',
+                        }}
+                      >
+                        <path 
+                          d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" 
+                          fill="white"
+                        />
+                      </svg>
                     </motion.div>
                   </div>
                   
