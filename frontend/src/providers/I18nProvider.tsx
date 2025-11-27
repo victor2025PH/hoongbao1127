@@ -103,6 +103,16 @@ const translations: Record<Language, Record<string, string>> = {
     
     // 發紅包頁
     click_select_group: '點擊選擇群組',
+    search_group: '搜索群組',
+    search_user: '搜索用戶',
+    search_placeholder: '輸入群組名稱、群鏈接或用戶名搜索',
+    no_groups_found: '未找到群組',
+    join_group_first: '請先加入該群組才能發送紅包',
+    open_group_link: '是否打開群組鏈接？',
+    bot_not_in_group: '機器人不在該群組中，無法自動發送紅包消息',
+    share_red_packet_link: '是否打開紅包分享鏈接？',
+    share_link: '分享鏈接',
+    user_not_in_group: '您不在該群組中，無法發送紅包',
     currency: '幣種',
     packet_type: '紅包類型',
     random_amount: '手氣最佳',
@@ -114,7 +124,6 @@ const translations: Record<Language, Record<string, string>> = {
     game_rules: '遊戲規則',
     best_mvp_rules: '手氣最佳：隨機金額分配，領取完成後金額最大的用戶將被標記為"最佳手氣"',
     bomb_rules: '紅包炸彈：固定金額分配，如果領取金額的小數點後最後一位數字與炸彈數字相同，將觸發炸彈，金額退回紅包池',
-    view_rules: '查看規則',
     
     // 抽獎頁
     lucky_red: 'Lucky Red',
@@ -283,6 +292,16 @@ const translations: Record<Language, Record<string, string>> = {
     
     // 发红包页
     click_select_group: '点击选择群组',
+    search_group: '搜索群组',
+    search_user: '搜索用户',
+    search_placeholder: '输入群组名称、群链接或用户名搜索',
+    no_groups_found: '未找到群组',
+    join_group_first: '请先加入该群组才能发送红包',
+    open_group_link: '是否打开群组链接？',
+    bot_not_in_group: '机器人不在该群组中，无法自动发送红包消息',
+    share_red_packet_link: '是否打开红包分享链接？',
+    share_link: '分享链接',
+    user_not_in_group: '您不在该群组中，无法发送红包',
     currency: '币种',
     packet_type: '红包类型',
     random_amount: '手气最佳',
@@ -294,7 +313,6 @@ const translations: Record<Language, Record<string, string>> = {
     game_rules: '游戏规则',
     best_mvp_rules: '手气最佳：随机金额分配，领取完成后金额最大的用户将被标记为"最佳手气"',
     bomb_rules: '红包炸弹：固定金额分配，如果领取金额的小数点后最后一位数字与炸弹数字相同，将触发炸弹，金额退回红包池',
-    view_rules: '查看规则',
     
     // 抽奖页
     lucky_red: 'Lucky Red',
@@ -463,6 +481,16 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Send packet page
     click_select_group: 'Click to select group',
+    search_group: 'Search Group',
+    search_user: 'Search User',
+    search_placeholder: 'Enter group name, group link, or username to search',
+    no_groups_found: 'No groups found',
+    join_group_first: 'Please join the group first to send red packet',
+    open_group_link: 'Open group link?',
+    bot_not_in_group: 'Bot is not in the group, cannot send red packet message automatically',
+    share_red_packet_link: 'Open red packet share link?',
+    share_link: 'Share link',
+    user_not_in_group: 'You are not in this group, cannot send red packet',
     currency: 'Currency',
     packet_type: 'Packet Type',
     random_amount: 'Best MVP',
@@ -473,7 +501,6 @@ const translations: Record<Language, Record<string, string>> = {
     game_rules: 'Game Rules',
     best_mvp_rules: 'Best MVP: Random amount distribution. After all packets are claimed, the user with the largest amount will be marked as "Best MVP"',
     bomb_rules: 'Red Packet Bomb: Fixed amount distribution. If the last digit of the claimed amount matches the bomb number, the bomb will trigger and the amount will be returned to the packet pool',
-    view_rules: 'View Rules',
     enter_quantity: 'Please enter quantity',
     
     // Lucky page
