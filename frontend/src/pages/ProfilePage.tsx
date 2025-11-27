@@ -83,11 +83,6 @@ export default function ProfilePage() {
         />
       </div>
 
-      {/* 版本信息 */}
-      <div className="text-center text-gray-500 text-sm mt-8">
-        <p>Version 1.0.0</p>
-        <p className="mt-1">© 2024 {t('app_name')}</p>
-      </div>
     </div>
   )
 }
