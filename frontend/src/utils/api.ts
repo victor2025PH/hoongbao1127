@@ -85,6 +85,7 @@ export interface SendRedPacketParams {
   quantity: number
   type: 'random' | 'fixed'
   message?: string
+  bomb_number?: number  // 0-9, 仅当 type='fixed' 时有效
 }
 
 export async function listRedPackets(): Promise<RedPacket[]> {

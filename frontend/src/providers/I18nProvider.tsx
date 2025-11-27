@@ -108,6 +108,13 @@ const translations: Record<Language, Record<string, string>> = {
     random_amount: '手氣最佳',
     fixed_amount: '紅包炸彈',
     enter_quantity: '請輸入數量',
+    bomb_number: '炸彈數字',
+    select_bomb_number: '選擇炸彈數字 (0-9)',
+    bomb_number_required: '請選擇炸彈數字',
+    game_rules: '遊戲規則',
+    best_mvp_rules: '手氣最佳：隨機金額分配，領取完成後金額最大的用戶將被標記為"最佳手氣"',
+    bomb_rules: '紅包炸彈：固定金額分配，如果領取金額的小數點後最後一位數字與炸彈數字相同，將觸發炸彈，金額退回紅包池',
+    view_rules: '查看規則',
     
     // 抽獎頁
     lucky_red: 'Lucky Red',
@@ -281,6 +288,13 @@ const translations: Record<Language, Record<string, string>> = {
     random_amount: '手气最佳',
     fixed_amount: '红包炸弹',
     enter_quantity: '请输入数量',
+    bomb_number: '炸弹数字',
+    select_bomb_number: '选择炸弹数字 (0-9)',
+    bomb_number_required: '请选择炸弹数字',
+    game_rules: '游戏规则',
+    best_mvp_rules: '手气最佳：随机金额分配，领取完成后金额最大的用户将被标记为"最佳手气"',
+    bomb_rules: '红包炸弹：固定金额分配，如果领取金额的小数点后最后一位数字与炸弹数字相同，将触发炸弹，金额退回红包池',
+    view_rules: '查看规则',
     
     // 抽奖页
     lucky_red: 'Lucky Red',
@@ -453,6 +467,13 @@ const translations: Record<Language, Record<string, string>> = {
     packet_type: 'Packet Type',
     random_amount: 'Best MVP',
     fixed_amount: 'Red Packet Bomb',
+    bomb_number: 'Bomb Number',
+    select_bomb_number: 'Select Bomb Number (0-9)',
+    bomb_number_required: 'Please select a bomb number',
+    game_rules: 'Game Rules',
+    best_mvp_rules: 'Best MVP: Random amount distribution. After all packets are claimed, the user with the largest amount will be marked as "Best MVP"',
+    bomb_rules: 'Red Packet Bomb: Fixed amount distribution. If the last digit of the claimed amount matches the bomb number, the bomb will trigger and the amount will be returned to the packet pool',
+    view_rules: 'View Rules',
     enter_quantity: 'Please enter quantity',
     
     // Lucky page
