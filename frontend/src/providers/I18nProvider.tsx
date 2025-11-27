@@ -109,6 +109,15 @@ const translations: Record<Language, Record<string, string>> = {
     fixed_amount: '固定金額',
     enter_quantity: '請輸入數量',
     
+    // 抽獎頁
+    lucky_red: 'Lucky Red',
+    remaining_today: '今日剩餘次數',
+    no_chances_left: '今日次數已用完',
+    come_tomorrow: '明日再來',
+    got_it: '知道了',
+    congrats: '恭喜獲得！',
+    awesome: '太棒了！',
+    
     // 兌換頁
     currency_exchange: '幣種兌換',
     from: '從',
@@ -273,6 +282,15 @@ const translations: Record<Language, Record<string, string>> = {
     fixed_amount: '固定金额',
     enter_quantity: '请输入数量',
     
+    // 抽奖页
+    lucky_red: 'Lucky Red',
+    remaining_today: '今日剩余次数',
+    no_chances_left: '今日次数已用完',
+    come_tomorrow: '明日再来',
+    got_it: '知道了',
+    congrats: '恭喜获得！',
+    awesome: '太棒了！',
+    
     // 兑换页
     currency_exchange: '币种兑换',
     from: '从',
@@ -436,6 +454,15 @@ const translations: Record<Language, Record<string, string>> = {
     random_amount: 'Random',
     fixed_amount: 'Fixed',
     enter_quantity: 'Please enter quantity',
+    
+    // Lucky page
+    lucky_red: 'Lucky Red',
+    remaining_today: 'Remaining Today',
+    no_chances_left: 'No Chances Left',
+    come_tomorrow: 'Come Back Tomorrow',
+    got_it: 'Got It',
+    congrats: 'Congratulations!',
+    awesome: 'Awesome!',
     
     // Exchange page
     currency_exchange: 'Currency Exchange',
