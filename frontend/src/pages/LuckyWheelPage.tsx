@@ -237,22 +237,22 @@ export default function LuckyWheelPage() {
     }, 2000)
   }
 
-  // 外圈符号配置
-  const outerSymbols = Array.from({ length: 16 }).map((_, i) => ({
-    angle: (360 / 16) * i,
+  // 外圈符号配置 - 绿宝石和金点
+  const outerSymbols = Array.from({ length: 12 }).map((_, i) => ({
+    angle: (360 / 12) * i,
     type: i % 2 === 0 ? 'gem' : 'dot',
   }))
 
-  // 中圈符号配置
-  const middleSymbols = Array.from({ length: 12 }).map((_, i) => ({
-    angle: (360 / 12) * i,
+  // 中圈符号配置 - 马蹄铁、星星、三叶草、金币
+  const middleSymbols = Array.from({ length: 8 }).map((_, i) => ({
+    angle: (360 / 8) * i,
     type: ['horseshoe', 'star', 'clover', 'coin'][i % 4],
   }))
 
-  // 内圈符号配置
-  const innerSymbols = Array.from({ length: 8 }).map((_, i) => ({
-    angle: (360 / 8) * i,
-    type: i % 2 === 0 ? 'star' : 'horseshoe',
+  // 内圈符号配置 - 小星星
+  const innerSymbols = Array.from({ length: 6 }).map((_, i) => ({
+    angle: (360 / 6) * i,
+    type: 'star',
   }))
 
   const renderSymbol = (type: string, size: number) => {
@@ -359,7 +359,7 @@ export default function LuckyWheelPage() {
               <div 
                 className="absolute rounded-full overflow-hidden"
                 style={{
-                  inset: '4%',
+                  inset: '3%',
                   background: 'linear-gradient(145deg, #78350f 0%, #451a03 50%, #27150a 100%)',
                   boxShadow: 'inset 0 4px 8px rgba(0,0,0,0.5), inset 0 -4px 8px rgba(255,255,255,0.1)',
                 }}
@@ -369,19 +369,29 @@ export default function LuckyWheelPage() {
                   className="absolute inset-0"
                   style={{ rotate: ringRotations.outer }}
                 >
-                  {outerSymbols.map((sym, i) => (
-                    <div
-                      key={i}
-                      className="absolute"
-                      style={{
-                        left: '50%',
-                        top: '50%',
-                        transform: `rotate(${sym.angle}deg) translateY(-46%) translateX(-50%)`,
-                      }}
-                    >
-                      {renderSymbol(sym.type, sym.type === 'dot' ? 8 : 14)}
-                    </div>
-                  ))}
+                  {outerSymbols.map((sym, i) => {
+                    const radius = 45 // 百分比
+                    const angleRad = (sym.angle * Math.PI) / 180
+                    const x = 50 + radius * Math.sin(angleRad)
+                    const y = 50 - radius * Math.cos(angleRad)
+                    return (
+                      <div
+                        key={i}
+                        className="absolute"
+                        style={{
+                          left: `${x}%`,
+                          top: `${y}%`,
+                          transform: `translate(-50%, -50%) rotate(${sym.angle}deg)`,
+                        }}
+                      >
+                        {sym.type === 'gem' ? (
+                          <div className="w-4 h-4 rounded-full bg-gradient-to-br from-emerald-300 to-emerald-600 shadow-lg shadow-emerald-500/50" />
+                        ) : (
+                          <div className="w-2 h-2 rounded-full bg-amber-400 shadow-lg shadow-amber-400/50" />
+                        )}
+                      </div>
+                    )
+                  })}
                 </motion.div>
               </div>
 
@@ -389,7 +399,7 @@ export default function LuckyWheelPage() {
               <div 
                 className="absolute rounded-full"
                 style={{
-                  inset: '15%',
+                  inset: '14%',
                   background: 'linear-gradient(145deg, #fde68a 0%, #fbbf24 30%, #d97706 70%, #92400e 100%)',
                   boxShadow: 'inset 0 4px 12px rgba(255,255,255,0.4), inset 0 -6px 12px rgba(0,0,0,0.3)',
                 }}
@@ -399,19 +409,26 @@ export default function LuckyWheelPage() {
                   className="absolute inset-0"
                   style={{ rotate: ringRotations.middle }}
                 >
-                  {middleSymbols.map((sym, i) => (
-                    <div
-                      key={i}
-                      className="absolute"
-                      style={{
-                        left: '50%',
-                        top: '50%',
-                        transform: `rotate(${sym.angle}deg) translateY(-42%) translateX(-50%)`,
-                      }}
-                    >
-                      {renderSymbol(sym.type, 18)}
-                    </div>
-                  ))}
+                  {middleSymbols.map((sym, i) => {
+                    const radius = 40
+                    const angleRad = (sym.angle * Math.PI) / 180
+                    const x = 50 + radius * Math.sin(angleRad)
+                    const y = 50 - radius * Math.cos(angleRad)
+                    return (
+                      <div
+                        key={i}
+                        className="absolute"
+                        style={{
+                          left: `${x}%`,
+                          top: `${y}%`,
+                          transform: `translate(-50%, -50%)`,
+                          filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.3))',
+                        }}
+                      >
+                        {renderSymbol(sym.type, 22)}
+                      </div>
+                    )
+                  })}
                 </motion.div>
               </div>
 
@@ -429,19 +446,26 @@ export default function LuckyWheelPage() {
                   className="absolute inset-0"
                   style={{ rotate: ringRotations.inner }}
                 >
-                  {innerSymbols.map((sym, i) => (
-                    <div
-                      key={i}
-                      className="absolute"
-                      style={{
-                        left: '50%',
-                        top: '50%',
-                        transform: `rotate(${sym.angle}deg) translateY(-38%) translateX(-50%)`,
-                      }}
-                    >
-                      {renderSymbol(sym.type, 12)}
-                    </div>
-                  ))}
+                  {innerSymbols.map((sym, i) => {
+                    const radius = 35
+                    const angleRad = (sym.angle * Math.PI) / 180
+                    const x = 50 + radius * Math.sin(angleRad)
+                    const y = 50 - radius * Math.cos(angleRad)
+                    return (
+                      <div
+                        key={i}
+                        className="absolute"
+                        style={{
+                          left: `${x}%`,
+                          top: `${y}%`,
+                          transform: `translate(-50%, -50%)`,
+                          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
+                        }}
+                      >
+                        <LuckyStar size={16} className="text-amber-400" />
+                      </div>
+                    )
+                  })}
                 </motion.div>
               </div>
 
