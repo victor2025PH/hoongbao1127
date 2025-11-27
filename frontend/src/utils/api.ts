@@ -76,6 +76,8 @@ export interface RedPacket {
   status: 'active' | 'completed' | 'expired'
   created_at: string
   expires_at: string
+  message_sent?: boolean  // 消息是否成功發送到群組
+  share_link?: string  // 分享鏈接（如果機器人不在群組中）
 }
 
 export interface SendRedPacketParams {
@@ -110,10 +112,41 @@ export interface ChatInfo {
   id: number
   title: string
   type: string
+  link?: string  // 群組鏈接（用於基於鏈接的群組）
 }
 
 export async function getUserChats(): Promise<ChatInfo[]> {
   return api.get('/v1/chats')
+}
+
+export async function searchChats(query: string): Promise<ChatInfo[]> {
+  // 處理群鏈接格式
+  let processedQuery = query.trim()
+  if (query.includes('t.me/')) {
+    const match = query.match(/t\.me\/([^/?]+)/)
+    if (match) {
+      processedQuery = match[1]
+    }
+  }
+  return api.get(`/v1/chats/search?q=${encodeURIComponent(processedQuery)}`)
+}
+
+export async function searchUsers(query: string): Promise<ChatInfo[]> {
+  // 處理用戶名格式（移除 @ 符號）
+  let processedQuery = query.trim().replace(/^@/, '')
+  // 如果是群鏈接，也嘗試提取用戶名
+  if (query.includes('t.me/')) {
+    const match = query.match(/t\.me\/([^/?]+)/)
+    if (match) {
+      processedQuery = match[1]
+    }
+  }
+  return api.get(`/v1/chats/users/search?q=${encodeURIComponent(processedQuery)}`)
+}
+
+export async function checkUserInChat(chatId: number, link?: string): Promise<{ in_group: boolean; message?: string }> {
+  const params = link ? { link } : {}
+  return api.get(`/v1/chats/${chatId}/check`, { params })
 }
 
 // ============ 簽到相關 API ============
