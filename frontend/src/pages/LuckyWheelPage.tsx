@@ -27,18 +27,16 @@ const prizes: Prize[] = [
   { id: 6, name: 'XP', value: 50, icon: TrendingUp, color: 'text-cyan-400', bgGradient: 'from-cyan-500/40 to-blue-500/40', probability: 10 },
 ]
 
-interface CoinSymbol {
+interface FloatingSymbol {
   id: string
   x: number
   y: number
   icon: React.ElementType
   size: number
   rotation: number
-  isFlying: boolean
-  vx: number
-  vy: number
-  life: number
-  maxLife: number
+  speed: number
+  opacity: number
+  rotationSpeed: number
 }
 
 export default function LuckyWheelPage() {
@@ -50,49 +48,104 @@ export default function LuckyWheelPage() {
   const [isExploding, setIsExploding] = useState(false)
   const [selectedPrize, setSelectedPrize] = useState<Prize | null>(null)
   const [spinsLeft, setSpinsLeft] = useState(3)
-  const [coins, setCoins] = useState<CoinSymbol[]>([])
+  const [symbols, setSymbols] = useState<FloatingSymbol[]>([])
   const [showNoChancesModal, setShowNoChancesModal] = useState(false)
   const holdTimerRef = useRef<number | null>(null)
   const progressTimerRef = useRef<number | null>(null)
-  const coinIntervalRef = useRef<number | null>(null)
   const redPacketRef = useRef<HTMLDivElement>(null)
+  const animationRef = useRef<number | null>(null)
+  const lastTimeRef = useRef<number>(0)
+  const isHoldingRef = useRef(false)
   const HOLD_DURATION = 2000
 
-  const coinIcons = [Coins, DollarSign, Star, Sparkles, Circle, Trophy]
+  const symbolIcons = [Coins, DollarSign, Star, Sparkles, Circle, Trophy]
 
-  const restoreRedPacket = () => {
-    if (!redPacketRef.current) return
-
-    const initialCoins: CoinSymbol[] = []
-    const addCoin = (idPrefix: string, yMin: number, yMax: number, count: number, minSize: number, maxSize: number) => {
-      for (let i = 0; i < count; i++) {
-        const yPercent = yMin + Math.random() * (yMax - yMin)
-        const xPercent = Math.random()
-        initialCoins.push({
-          id: `${idPrefix}-${i}-${Date.now()}`,
-          x: xPercent * 100,
-          y: yPercent * 100,
-          icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
-          size: minSize + Math.random() * (maxSize - minSize),
-          rotation: Math.random() * 360,
-          isFlying: false,
-          vx: 0,
-          vy: 0,
-          life: 0,
-          maxLife: 100 + Math.random() * 50,
-        })
-      }
+  // 创建新符号
+  const createSymbol = (yPosition?: number): FloatingSymbol => {
+    return {
+      id: `symbol-${Date.now()}-${Math.random()}`,
+      x: 5 + Math.random() * 90, // 5-95% 避免边缘
+      y: yPosition ?? (85 + Math.random() * 15), // 从底部生成
+      icon: symbolIcons[Math.floor(Math.random() * symbolIcons.length)],
+      size: 10 + Math.random() * 10,
+      rotation: Math.random() * 360,
+      speed: 0.15 + Math.random() * 0.1, // 基础上升速度
+      opacity: 0.7 + Math.random() * 0.3,
+      rotationSpeed: (Math.random() - 0.5) * 2,
     }
-
-    addCoin('coin-bottom', 0.6, 1.0, 40, 10, 18)
-    addCoin('coin-middle', 0.3, 0.6, 20, 8, 14)
-    addCoin('coin-top', 0.0, 0.3, 10, 6, 12)
-
-    setCoins(initialCoins)
   }
 
+  // 初始化符号
   useEffect(() => {
-    restoreRedPacket()
+    const initialSymbols: FloatingSymbol[] = []
+    for (let i = 0; i < 50; i++) {
+      initialSymbols.push(createSymbol(Math.random() * 100))
+    }
+    setSymbols(initialSymbols)
+  }, [])
+
+  // 同步 isHolding 到 ref
+  useEffect(() => {
+    isHoldingRef.current = isHolding
+  }, [isHolding])
+
+  // 持续动画循环
+  useEffect(() => {
+    let spawnTimer = 0
+    
+    const animate = (timestamp: number) => {
+      if (!lastTimeRef.current) lastTimeRef.current = timestamp
+      const deltaTime = Math.min(timestamp - lastTimeRef.current, 50) // 限制最大间隔
+      lastTimeRef.current = timestamp
+      
+      const holding = isHoldingRef.current
+      const speedMultiplier = holding ? 3 : 1 // 长按时速度x3
+      spawnTimer += deltaTime
+      
+      // 生成新符号的间隔
+      const spawnInterval = holding ? 80 : 200 // 长按时生成更频繁
+      
+      setSymbols(prev => {
+        let updated = prev.map(symbol => {
+          // 上升
+          const newY = symbol.y - symbol.speed * speedMultiplier * (deltaTime / 16)
+          // 根据位置计算透明度 - 越往上越透明
+          const fadeStart = 30 // 从30%位置开始淡出
+          let newOpacity = symbol.opacity
+          if (newY < fadeStart) {
+            newOpacity = Math.max(0, (newY / fadeStart) * symbol.opacity)
+          }
+          
+          return {
+            ...symbol,
+            y: newY,
+            opacity: newOpacity,
+            rotation: symbol.rotation + symbol.rotationSpeed * speedMultiplier,
+          }
+        }).filter(symbol => symbol.y > -5 && symbol.opacity > 0.01) // 移除顶部消失的符号
+        
+        // 生成新符号
+        if (spawnTimer >= spawnInterval) {
+          spawnTimer = 0
+          const newCount = holding ? 3 : 1 // 长按时一次生成更多
+          for (let i = 0; i < newCount; i++) {
+            updated.push(createSymbol())
+          }
+        }
+        
+        return updated
+      })
+      
+      animationRef.current = requestAnimationFrame(animate)
+    }
+    
+    animationRef.current = requestAnimationFrame(animate)
+    
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
   }, [])
 
   const drawPrize = () => {
@@ -123,14 +176,6 @@ export default function LuckyWheelPage() {
     setHoldProgress(0)
     playSound('click')
 
-    setCoins(prev => prev.map(coin => ({
-      ...coin,
-      isFlying: true,
-      vx: (Math.random() - 0.5) * 2,
-      vy: -3 - Math.random() * 3,
-      life: 0,
-    })))
-
     const startTime = Date.now()
     progressTimerRef.current = window.setInterval(() => {
       const elapsed = Date.now() - startTime
@@ -153,10 +198,6 @@ export default function LuckyWheelPage() {
       window.clearInterval(progressTimerRef.current)
       progressTimerRef.current = null
     }
-    if (coinIntervalRef.current) {
-      window.clearInterval(coinIntervalRef.current)
-      coinIntervalRef.current = null
-    }
     setHoldProgress(0)
   }
 
@@ -170,32 +211,6 @@ export default function LuckyWheelPage() {
     if (progressTimerRef.current) {
       window.clearInterval(progressTimerRef.current)
       progressTimerRef.current = null
-    }
-
-    if (redPacketRef.current) {
-      const rect = redPacketRef.current.getBoundingClientRect()
-      const centerX = rect.left + rect.width / 2
-      const centerY = rect.top + rect.height / 2
-
-      const explosionCoins: CoinSymbol[] = []
-      for (let i = 0; i < 50; i++) {
-        const angle = (Math.PI * 2 * i) / 50 + Math.random() * 0.5
-        const speed = 4 + Math.random() * 4
-        explosionCoins.push({
-          id: `explosion-${Date.now()}-${i}`,
-          x: centerX,
-          y: centerY,
-          icon: coinIcons[Math.floor(Math.random() * coinIcons.length)],
-          size: 10 + Math.random() * 12,
-          rotation: Math.random() * 360,
-          isFlying: true,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          life: 0,
-          maxLife: 80 + Math.random() * 40,
-        })
-      }
-      setCoins(prev => [...prev, ...explosionCoins])
     }
 
     const end = Date.now() + 2000
@@ -226,39 +241,6 @@ export default function LuckyWheelPage() {
       setIsExploding(false)
     }, 1500)
   }
-
-  useEffect(() => {
-    if (coins.length === 0) return
-
-    const animate = () => {
-      setCoins(prev => {
-        const updated = prev
-          .map(coin => {
-            if (!coin.isFlying) return coin
-
-            return {
-              ...coin,
-              x: coin.x + coin.vx,
-              y: coin.y + coin.vy,
-              rotation: coin.rotation + 5,
-              life: coin.life + 1,
-              vy: coin.vy + 0.1,
-            }
-          })
-          .filter(coin => {
-            if (!coin.isFlying) return true
-            return coin.life < coin.maxLife && coin.y > -100 && coin.y < window.innerHeight + 100
-          })
-
-        if (updated.some(c => c.isFlying)) {
-          requestAnimationFrame(animate)
-        }
-        return updated
-      })
-    }
-
-    requestAnimationFrame(animate)
-  }, [coins.length])
 
   return (
     <PageTransition>
@@ -292,41 +274,27 @@ export default function LuckyWheelPage() {
             onTouchEnd={handleEnd}
             onTouchCancel={handleEnd}
           >
-            {/* 虚拟币符号层 */}
-            <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
-              {coins.filter(coin => !coin.isFlying).map(coin => {
-                const Icon = coin.icon
+            {/* 浮动符号层 - 持续上升动画 */}
+            <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden rounded-3xl">
+              {symbols.map(symbol => {
+                const Icon = symbol.icon
                 return (
-                  <motion.div
-                    key={coin.id}
-                    className="absolute"
+                  <div
+                    key={symbol.id}
+                    className="absolute text-yellow-400"
                     style={{
-                      left: `${coin.x}%`,
-                      top: `${coin.y}%`,
-                      transform: `translate(-50%, -50%) rotate(${coin.rotation}deg)`,
-                    }}
-                    animate={isHolding ? {
-                      scale: [1, 1.3, 1],
-                      opacity: [0.8, 1, 0.8],
-                    } : {
-                      opacity: [0.8, 1, 0.8],
-                    }}
-                    transition={{
-                      duration: 0.5,
-                      repeat: Infinity,
-                      ease: "easeInOut",
+                      left: `${symbol.x}%`,
+                      top: `${symbol.y}%`,
+                      transform: `translate(-50%, -50%) rotate(${symbol.rotation}deg)`,
+                      opacity: symbol.opacity,
+                      filter: isHolding
+                        ? 'drop-shadow(0 0 6px #fbbf24) drop-shadow(0 0 12px #fbbf24)'
+                        : 'drop-shadow(0 0 3px rgba(251, 191, 36, 0.4))',
+                      transition: 'filter 0.3s ease',
                     }}
                   >
-                    <Icon
-                      size={coin.size}
-                      className="text-yellow-400"
-                      style={{
-                        filter: isHolding
-                          ? 'drop-shadow(0 0 8px #fbbf24) drop-shadow(0 0 16px #fbbf24)'
-                          : 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.5)) drop-shadow(0 0 8px rgba(251, 191, 36, 0.3))',
-                      }}
-                    />
-                  </motion.div>
+                    <Icon size={symbol.size} />
+                  </div>
                 )
               })}
             </div>
@@ -643,12 +611,7 @@ export default function LuckyWheelPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                onClick={() => {
-                  setSelectedPrize(null)
-                  setTimeout(() => {
-                    restoreRedPacket()
-                  }, 100)
-                }}
+                onClick={() => setSelectedPrize(null)}
               />
               <motion.div
                 initial={{ scale: 0.5, opacity: 0, y: 50 }}
@@ -671,12 +634,7 @@ export default function LuckyWheelPage() {
                   {selectedPrize.name}
                 </p>
                 <motion.button
-                  onClick={() => {
-                    setSelectedPrize(null)
-                    setTimeout(() => {
-                      restoreRedPacket()
-                    }, 100)
-                  }}
+                  onClick={() => setSelectedPrize(null)}
                   className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
