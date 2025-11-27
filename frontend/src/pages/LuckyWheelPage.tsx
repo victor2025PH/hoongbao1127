@@ -5,6 +5,7 @@ import { useTranslation } from '../providers/I18nProvider'
 import { useSound } from '../hooks/useSound'
 import { useNavigate } from 'react-router-dom'
 import PageTransition from '../components/PageTransition'
+import TelegramStar from '../components/TelegramStar'
 import confetti from 'canvas-confetti'
 
 interface Prize {
@@ -25,73 +26,96 @@ const prizes: Prize[] = [
   { id: 6, name: 'Stars', value: 5, color: 'text-cyan-400', bgGradient: 'from-cyan-500/40 to-blue-500/40', probability: 10 },
 ]
 
-// 幸运符号 SVG 组件
+// 精细化幸运符号 SVG 组件
 const Horseshoe = ({ size = 24, className = "" }: { size?: number; className?: string }) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className}>
-    <path 
-      d="M5 2C3.343 2 2 3.343 2 5v7c0 5.523 4.477 10 10 10s10-4.477 10-10V5c0-1.657-1.343-3-3-3h-2v5c0 2.761-2.239 5-5 5s-5-2.239-5-5V2H5z" 
-      fill="currentColor"
-    />
-  </svg>
-)
-
-const FourLeafClover = ({ size = 24, className = "" }: { size?: number; className?: string }) => (
-  <svg viewBox="0 0 100 100" width={size} height={size} className={className}>
     <defs>
-      <linearGradient id="cloverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#22c55e" />
-        <stop offset="50%" stopColor="#16a34a" />
-        <stop offset="100%" stopColor="#15803d" />
+      <linearGradient id="horseshoeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#fcd34d" />
+        <stop offset="50%" stopColor="#f59e0b" />
+        <stop offset="100%" stopColor="#b45309" />
       </linearGradient>
     </defs>
-    {/* 四片叶子 */}
-    <ellipse cx="50" cy="30" rx="18" ry="22" fill="url(#cloverGrad)" transform="rotate(0 50 50)" />
-    <ellipse cx="70" cy="50" rx="22" ry="18" fill="url(#cloverGrad)" transform="rotate(0 50 50)" />
-    <ellipse cx="50" cy="70" rx="18" ry="22" fill="url(#cloverGrad)" transform="rotate(0 50 50)" />
-    <ellipse cx="30" cy="50" rx="22" ry="18" fill="url(#cloverGrad)" transform="rotate(0 50 50)" />
-    {/* 茎 */}
-    <path d="M50 72 Q48 85, 42 95" stroke="#15803d" strokeWidth="4" fill="none" strokeLinecap="round" />
-    {/* 叶脉 */}
-    <path d="M50 50 L50 20" stroke="#15803d" strokeWidth="2" opacity="0.5" />
-    <path d="M50 50 L80 50" stroke="#15803d" strokeWidth="2" opacity="0.5" />
-    <path d="M50 50 L50 80" stroke="#15803d" strokeWidth="2" opacity="0.5" />
-    <path d="M50 50 L20 50" stroke="#15803d" strokeWidth="2" opacity="0.5" />
-    {/* 高光 */}
-    <ellipse cx="45" cy="26" rx="5" ry="6" fill="rgba(255,255,255,0.3)" />
-    <ellipse cx="74" cy="45" rx="6" ry="5" fill="rgba(255,255,255,0.3)" />
+    <path 
+      d="M5 2C3.343 2 2 3.343 2 5v7c0 5.523 4.477 10 10 10s10-4.477 10-10V5c0-1.657-1.343-3-3-3h-2v5c0 2.761-2.239 5-5 5s-5-2.239-5-5V2H5z" 
+      fill="url(#horseshoeGrad)"
+    />
+    <path 
+      d="M6 3v4c0 3.314 2.686 6 6 6s6-2.686 6-6V3" 
+      stroke="rgba(255,255,255,0.4)" 
+      strokeWidth="0.8" 
+      fill="none"
+    />
   </svg>
 )
 
 const LuckyStar = ({ size = 24, className = "" }: { size?: number; className?: string }) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className}>
+    <defs>
+      <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#fef08a" />
+        <stop offset="50%" stopColor="#fbbf24" />
+        <stop offset="100%" stopColor="#f59e0b" />
+      </linearGradient>
+    </defs>
     <path 
       d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" 
-      fill="currentColor"
+      fill="url(#starGrad)"
+    />
+    <path 
+      d="M12 4l2.2 4.5 5 .7-3.6 3.5.85 5-4.45-2.35" 
+      fill="rgba(255,255,255,0.25)"
     />
   </svg>
 )
 
 const Clover = ({ size = 24, className = "" }: { size?: number; className?: string }) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className}>
-    <circle cx="9" cy="9" r="5" fill="currentColor" />
-    <circle cx="15" cy="9" r="5" fill="currentColor" />
-    <circle cx="12" cy="15" r="5" fill="currentColor" />
-    <rect x="11" y="16" width="2" height="6" fill="currentColor" />
+    <defs>
+      <linearGradient id="cloverSmallGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#4ade80" />
+        <stop offset="50%" stopColor="#22c55e" />
+        <stop offset="100%" stopColor="#16a34a" />
+      </linearGradient>
+    </defs>
+    <circle cx="9" cy="8" r="4.5" fill="url(#cloverSmallGrad)" />
+    <circle cx="15" cy="8" r="4.5" fill="url(#cloverSmallGrad)" />
+    <circle cx="12" cy="14" r="4.5" fill="url(#cloverSmallGrad)" />
+    <path d="M12 16 L12 22" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" />
+    <ellipse cx="8" cy="7" rx="1.5" ry="1" fill="rgba(255,255,255,0.3)" />
   </svg>
 )
 
-const Gem = ({ size = 24, className = "" }: { size?: number; className?: string }) => (
+const GemStone = ({ size = 24, className = "" }: { size?: number; className?: string }) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className}>
-    <path d="M6 3h12l4 6-10 12L2 9l4-6z" fill="currentColor" />
-    <path d="M2 9h20M6 3l6 18M18 3l-6 18M6 3l6 6 6-6" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" fill="none" />
+    <defs>
+      <linearGradient id="gemGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#6ee7b7" />
+        <stop offset="50%" stopColor="#34d399" />
+        <stop offset="100%" stopColor="#10b981" />
+      </linearGradient>
+    </defs>
+    <path d="M12 2 L20 8 L12 22 L4 8 Z" fill="url(#gemGrad)" />
+    <path d="M4 8 L12 8 L12 22" fill="rgba(0,0,0,0.15)" />
+    <path d="M12 2 L12 8 L20 8" fill="rgba(255,255,255,0.25)" />
+    <path d="M8 5 L16 5 L20 8 L4 8 Z" fill="rgba(255,255,255,0.15)" />
   </svg>
 )
 
-const Coin = ({ size = 24, className = "" }: { size?: number; className?: string }) => (
+const GoldCoin = ({ size = 24, className = "" }: { size?: number; className?: string }) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className}>
-    <circle cx="12" cy="12" r="10" fill="currentColor" />
-    <circle cx="12" cy="12" r="7" stroke="rgba(0,0,0,0.2)" strokeWidth="1" fill="none" />
-    <text x="12" y="16" textAnchor="middle" fontSize="10" fill="rgba(0,0,0,0.3)" fontWeight="bold">$</text>
+    <defs>
+      <linearGradient id="coinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#fef08a" />
+        <stop offset="30%" stopColor="#fbbf24" />
+        <stop offset="70%" stopColor="#f59e0b" />
+        <stop offset="100%" stopColor="#d97706" />
+      </linearGradient>
+    </defs>
+    <circle cx="12" cy="12" r="10" fill="url(#coinGrad)" />
+    <circle cx="12" cy="12" r="7.5" stroke="rgba(180,83,9,0.4)" strokeWidth="1.5" fill="none" />
+    <text x="12" y="16" textAnchor="middle" fontSize="10" fill="#92400e" fontWeight="bold" fontFamily="serif">$</text>
+    <ellipse cx="8" cy="8" rx="3" ry="2" fill="rgba(255,255,255,0.3)" />
   </svg>
 )
 
@@ -258,17 +282,15 @@ export default function LuckyWheelPage() {
   const renderSymbol = (type: string, size: number) => {
     switch (type) {
       case 'horseshoe':
-        return <Horseshoe size={size} className="text-amber-600" />
+        return <Horseshoe size={size} />
       case 'star':
-        return <LuckyStar size={size} className="text-amber-400" />
+        return <LuckyStar size={size} />
       case 'clover':
-        return <Clover size={size} className="text-green-500" />
+        return <Clover size={size} />
       case 'gem':
-        return <Gem size={size} className="text-emerald-400" />
+        return <GemStone size={size} />
       case 'coin':
-        return <Coin size={size} className="text-yellow-500" />
-      case 'dot':
-        return <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50" />
+        return <GoldCoin size={size} />
       default:
         return null
     }
@@ -355,13 +377,13 @@ export default function LuckyWheelPage() {
                 }}
               />
 
-              {/* 外圈装饰层 - 深棕色带绿宝石 */}
+              {/* 外圈装饰层 - 半透明琥珀色 */}
               <div 
                 className="absolute rounded-full overflow-hidden"
                 style={{
                   inset: '3%',
-                  background: 'linear-gradient(145deg, #78350f 0%, #451a03 50%, #27150a 100%)',
-                  boxShadow: 'inset 0 4px 8px rgba(0,0,0,0.5), inset 0 -4px 8px rgba(255,255,255,0.1)',
+                  background: 'linear-gradient(145deg, rgba(180, 83, 9, 0.85) 0%, rgba(120, 53, 15, 0.9) 50%, rgba(69, 26, 3, 0.85) 100%)',
+                  boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.4), inset 0 -4px 10px rgba(255,255,255,0.15)',
                 }}
               >
                 {/* 外圈旋转符号 */}
@@ -432,13 +454,13 @@ export default function LuckyWheelPage() {
                 </motion.div>
               </div>
 
-              {/* 内圈深棕层 */}
+              {/* 内圈 - 半透明深琥珀色 */}
               <div 
                 className="absolute rounded-full"
                 style={{
                   inset: '28%',
-                  background: 'linear-gradient(145deg, #78350f 0%, #451a03 50%, #1c0a00 100%)',
-                  boxShadow: 'inset 0 3px 8px rgba(0,0,0,0.6), inset 0 -3px 8px rgba(255,255,255,0.05)',
+                  background: 'linear-gradient(145deg, rgba(146, 64, 14, 0.9) 0%, rgba(120, 53, 15, 0.85) 50%, rgba(69, 26, 3, 0.9) 100%)',
+                  boxShadow: 'inset 0 3px 8px rgba(0,0,0,0.5), inset 0 -3px 8px rgba(255,255,255,0.1)',
                 }}
               >
                 {/* 内圈旋转符号 */}
@@ -459,53 +481,53 @@ export default function LuckyWheelPage() {
                           left: `${x}%`,
                           top: `${y}%`,
                           transform: `translate(-50%, -50%)`,
-                          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
+                          filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))',
                         }}
                       >
-                        <LuckyStar size={16} className="text-amber-400" />
+                        <LuckyStar size={18} />
                       </div>
                     )
                   })}
                 </motion.div>
               </div>
 
-              {/* 中心四叶草区域 */}
+              {/* 中心星星区域 */}
               <div 
                 className="absolute rounded-full flex items-center justify-center"
                 style={{
-                  inset: '38%',
-                  background: 'linear-gradient(145deg, #fde68a 0%, #fbbf24 50%, #b45309 100%)',
-                  boxShadow: 'inset 0 4px 10px rgba(255,255,255,0.5), inset 0 -4px 10px rgba(0,0,0,0.3), 0 0 20px rgba(251, 191, 36, 0.3)',
+                  inset: '36%',
+                  background: 'linear-gradient(145deg, #fef08a 0%, #fbbf24 40%, #f59e0b 100%)',
+                  boxShadow: 'inset 0 4px 12px rgba(255,255,255,0.6), inset 0 -4px 12px rgba(0,0,0,0.25), 0 0 25px rgba(251, 191, 36, 0.4)',
                 }}
               >
                 {/* 放射线纹理 */}
                 <div 
-                  className="absolute inset-0 rounded-full overflow-hidden opacity-30"
+                  className="absolute inset-0 rounded-full overflow-hidden opacity-40"
                   style={{
-                    background: `repeating-conic-gradient(from 0deg, transparent 0deg, transparent 5deg, rgba(255,255,255,0.1) 5deg, rgba(255,255,255,0.1) 10deg)`,
+                    background: `repeating-conic-gradient(from 0deg, transparent 0deg, transparent 6deg, rgba(255,255,255,0.15) 6deg, rgba(255,255,255,0.15) 12deg)`,
                   }}
                 />
                 
-                {/* 四叶草 */}
+                {/* TelegramStar - 和右上角一样 */}
                 <motion.div
                   animate={isHolding ? {
-                    scale: [1, 1.15, 1],
-                    rotate: [0, 10, -10, 0],
+                    scale: [1, 1.2, 1],
+                    rotate: [0, 15, -15, 0],
                   } : {
-                    scale: [1, 1.05, 1],
+                    scale: [1, 1.06, 1],
                   }}
                   transition={{
-                    duration: isHolding ? 0.3 : 2,
+                    duration: isHolding ? 0.25 : 2.5,
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
                   style={{
                     filter: isHolding 
-                      ? 'drop-shadow(0 0 15px rgba(34, 197, 94, 0.8)) drop-shadow(0 0 30px rgba(34, 197, 94, 0.5))'
-                      : 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.5))',
+                      ? 'drop-shadow(0 0 20px rgba(251, 191, 36, 1)) drop-shadow(0 0 40px rgba(245, 158, 11, 0.8))'
+                      : 'drop-shadow(0 0 10px rgba(251, 191, 36, 0.7))',
                   }}
                 >
-                  <FourLeafClover size={70} />
+                  <TelegramStar size={65} withSpray={isHolding} />
                 </motion.div>
               </div>
 
