@@ -1,16 +1,29 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Bell, Volume2, VolumeX, Globe, ChevronDown } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useTranslation } from '../providers/I18nProvider'
 import { useGlobalAudio, useSound } from '../hooks/useSound'
+import { useQuery } from '@tanstack/react-query'
+import { getUnreadCount } from '../utils/api'
 import TelegramStar from './TelegramStar'
+import MessagesPanel from './MessagesPanel'
 
 export default function TopToolbar() {
   const { t, language, setLanguage } = useTranslation()
   const { isMuted, toggleMute } = useGlobalAudio()
   const { playSound } = useSound()
   const [showLangMenu, setShowLangMenu] = useState(false)
-  const [hasNotification] = useState(true)
+  const [showMessagesPanel, setShowMessagesPanel] = useState(false)
+  
+  // 獲取未讀消息數量
+  const { data: unreadData } = useQuery({
+    queryKey: ['unread-count'],
+    queryFn: getUnreadCount,
+    refetchInterval: 30000, // 每 30 秒刷新一次
+  })
+  
+  const unreadCount = unreadData?.unread_count || 0
+  const hasNotification = unreadCount > 0
 
   const langLabel = {
     'zh-TW': '繁',
@@ -91,11 +104,58 @@ export default function TopToolbar() {
         </div>
       </div>
 
-      {/* 右側：星星 */}
-      <div className="relative group cursor-pointer" onClick={() => playSound('pop')}>
-        <TelegramStar size={32} withSpray={true} />
-        <div className="absolute inset-0 bg-yellow-500/20 blur-md rounded-full pointer-events-none group-hover:bg-yellow-500/40 transition-colors" />
+      {/* 右側：星星（消息中心） */}
+      <div className="relative">
+        <button
+          onClick={() => {
+            playSound('pop')
+            setShowMessagesPanel(!showMessagesPanel)
+          }}
+          className="relative group cursor-pointer flex items-center gap-2"
+        >
+          <div className="relative">
+            <TelegramStar size={32} withSpray={true} />
+            <div className="absolute inset-0 bg-yellow-500/20 blur-md rounded-full pointer-events-none group-hover:bg-yellow-500/40 transition-colors" />
+            
+            {/* 未讀消息徽章 */}
+            {unreadCount > 0 && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -left-2 -top-1 min-w-[20px] h-5 px-1.5 bg-red-500 rounded-full border-2 border-brand-dark flex items-center justify-center"
+              >
+                <span className="text-xs font-bold text-white">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              </motion.div>
+            )}
+            
+            {/* 小紅點提示 */}
+            {unreadCount > 0 && (
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-brand-dark"
+              />
+            )}
+          </div>
+          
+          {/* 提示文字 */}
+          <motion.span
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-xs text-gray-400 whitespace-nowrap group-hover:text-white transition-colors"
+          >
+            {showMessagesPanel ? '關閉消息' : '打開消息'}
+          </motion.span>
+        </button>
       </div>
+
+      {/* 消息面板 */}
+      <MessagesPanel
+        isOpen={showMessagesPanel}
+        onClose={() => setShowMessagesPanel(false)}
+      />
     </div>
   )
 }

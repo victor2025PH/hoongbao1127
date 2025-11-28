@@ -298,3 +298,114 @@ export async function createWithdrawOrder(amount: number, currency: string, addr
   return api.post('/v1/wallet/withdraw', { amount, currency, address })
 }
 
+// ============ 消息相關 API ============
+
+export interface Message {
+  id: number
+  message_type: string
+  status: string
+  title?: string
+  content: string
+  action_url?: string
+  source?: string
+  source_name?: string
+  can_reply: boolean
+  meta_data?: Record<string, any>  // 使用 meta_data 而不是 metadata
+  created_at: string
+  read_at?: string
+  reply_to_id?: number
+}
+
+export interface MessageListResponse {
+  total: number
+  page: number
+  limit: number
+  unread_count: number
+  messages: Message[]
+}
+
+export interface UnreadCountResponse {
+  unread_count: number
+  unread_by_type: Record<string, number>
+}
+
+export interface NotificationSettings {
+  notification_method: string
+  enable_system: boolean
+  enable_redpacket: boolean
+  enable_balance: boolean
+  enable_activity: boolean
+  enable_miniapp: boolean
+  enable_telegram: boolean
+}
+
+export async function getMessages(params?: {
+  message_type?: string
+  status?: string
+  page?: number
+  limit?: number
+}): Promise<MessageListResponse> {
+  const queryParams = new URLSearchParams()
+  if (params?.message_type) queryParams.append('message_type', params.message_type)
+  if (params?.status) queryParams.append('status', params.status)
+  if (params?.page) queryParams.append('page', params.page.toString())
+  if (params?.limit) queryParams.append('limit', params.limit.toString())
+  
+  const query = queryParams.toString()
+  // 如果沒有認證信息，返回空結果（本地測試）
+  try {
+    return await api.get(`/v1/messages/${query ? '?' + query : ''}`)
+  } catch (error: any) {
+    // 如果是認證錯誤，返回空結果
+    if (error.message?.includes('Unauthorized') || error.response?.status === 401) {
+      return {
+        total: 0,
+        page: 1,
+        limit: params?.limit || 20,
+        unread_count: 0,
+        messages: []
+      }
+    }
+    throw error
+  }
+}
+
+export async function getUnreadCount(): Promise<UnreadCountResponse> {
+  try {
+    return await api.get('/v1/messages/unread-count')
+  } catch (error: any) {
+    // 如果是認證錯誤，返回空結果
+    if (error.message?.includes('Unauthorized') || error.response?.status === 401) {
+      return {
+        unread_count: 0,
+        unread_by_type: {}
+      }
+    }
+    throw error
+  }
+}
+
+export async function getMessage(messageId: number): Promise<Message> {
+  return api.get(`/v1/messages/${messageId}`)
+}
+
+export async function markMessageAsRead(messageId: number): Promise<{ success: boolean }> {
+  return api.put(`/v1/messages/${messageId}/read`)
+}
+
+export async function deleteMessage(messageId: number): Promise<{ success: boolean }> {
+  return api.delete(`/v1/messages/${messageId}`)
+}
+
+export async function replyMessage(messageId: number, content: string): Promise<Message> {
+  return api.post(`/v1/messages/${messageId}/reply`, { content })
+}
+
+export async function getNotificationSettings(): Promise<NotificationSettings> {
+  return api.get('/v1/messages/settings')
+}
+
+export async function updateNotificationSettings(settings: Partial<NotificationSettings>): Promise<NotificationSettings> {
+  return api.put('/v1/messages/settings', settings)
+}
+

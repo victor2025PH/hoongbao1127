@@ -260,9 +260,32 @@ async def claim_red_packet(
     # 更新用戶餘額
     balance_field = f"balance_{packet.currency.value}"
     current_balance = getattr(claimer, balance_field, 0) or Decimal(0)
-    setattr(claimer, balance_field, current_balance + amount)
+    new_balance = current_balance + amount
+    setattr(claimer, balance_field, new_balance)
     
     await db.commit()
+    
+    # 發送消息通知（異步，不阻塞響應）
+    try:
+        from api.services.message_service import MessageService
+        message_service = MessageService(db)
+        await message_service.send_redpacket_notification(
+            user_id=claimer.id,
+            redpacket_id=packet.id,
+            amount=float(amount),
+            currency=packet.currency.value,
+            is_claimed=True
+        )
+        # 發送餘額變動通知
+        await message_service.send_balance_notification(
+            user_id=claimer.id,
+            amount=float(amount),
+            currency=packet.currency.value,
+            transaction_type="receive",
+            balance_after=float(new_balance)
+        )
+    except Exception as e:
+        logger.error(f"Failed to send notification: {e}")
     
     return ClaimResult(
         success=True,

@@ -324,9 +324,9 @@ export default function WalletPage() {
                 <span className="text-[10px] text-purple-300">{t('permanent_earn')} 10% {t('commission')}</span>
               </div>
             </div>
-            <button className="w-5 h-5 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 relative z-10">
+            <div className="w-5 h-5 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 relative z-10 pointer-events-none">
               <ChevronRight size={8} className="text-gray-400" />
-            </button>
+            </div>
           </button>
         </div>
 

@@ -6,6 +6,7 @@ import Loading from './components/Loading'
 import AlertModal from './components/AlertModal'
 import ConfirmModal from './components/ConfirmModal'
 import { setAlertCallback, setConfirmCallback } from './utils/telegram'
+import { notificationManager } from './utils/notification'
 
 // 懒加载页面
 const WalletPage = lazy(() => import('./pages/WalletPage'))
@@ -43,6 +44,24 @@ export default function App() {
     isOpen: false,
     message: '',
   })
+
+  // 初始化通知管理器
+  useEffect(() => {
+    notificationManager.init().catch(console.error)
+    
+    return () => {
+      notificationManager.cleanup()
+    }
+  }, [])
+
+  // 初始化通知管理器
+  useEffect(() => {
+    notificationManager.init().catch(console.error)
+    
+    return () => {
+      notificationManager.cleanup()
+    }
+  }, [])
 
   // 設置全局 Alert 回調
   useEffect(() => {
