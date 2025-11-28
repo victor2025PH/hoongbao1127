@@ -109,10 +109,14 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user = query.from_user
     
-    await query.answer()
-    
     # 解析紅包 UUID
-    packet_uuid = query.data.split(":")[1]
+    try:
+        packet_uuid = query.data.split(":")[1]
+    except (IndexError, AttributeError):
+        await query.answer("無效的紅包鏈接", show_alert=True)
+        return
+    
+    await query.answer()
     
     with get_db() as db:
         # 查找紅包
@@ -193,20 +197,28 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 獲取發送者信息
         sender = db.query(User).filter(User.id == packet.sender_id).first()
         sender_name = sender.first_name if sender else "Unknown"
+        
+        # 在數據庫會話內讀取所有需要的屬性值
+        total_amount = float(packet.total_amount)
+        claimed_count = packet.claimed_count
+        total_count = packet.total_count
+        packet_message = packet.message
+        packet_status = packet.status
+        packet_uuid = packet.uuid
     
     await query.answer(f"🎉 恭喜獲得 {float(claim_amount):.4f} USDT！", show_alert=True)
     
-    # 更新消息
+    # 更新消息（使用已保存的變量，而不是數據庫對象）
     text = f"""
 🧧 *{sender_name} 發了一個紅包*
 
-💰 {float(packet.total_amount):.2f} USDT | 👥 {packet.claimed_count}/{packet.total_count} 份
-📝 {packet.message}
+💰 {total_amount:.2f} USDT | 👥 {claimed_count}/{total_count} 份
+📝 {packet_message}
 
 {user.first_name} 搶到了 {float(claim_amount):.4f} USDT！
 """
     
-    if packet.status == RedPacketStatus.COMPLETED:
+    if packet_status == RedPacketStatus.COMPLETED:
         text += "\n✅ 紅包已搶完"
         keyboard = []
     else:
