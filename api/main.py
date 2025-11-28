@@ -87,6 +87,7 @@ async def health_check():
 # 註冊路由
 app.include_router(auth.router, prefix="/api/auth", tags=["認證"])
 app.include_router(users.router, prefix="/api/users", tags=["用戶"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["用戶-v1"])  # 兼容 miniapp 的 /v1/users 路径
 app.include_router(redpackets.router, prefix="/api/redpackets", tags=["紅包"])
 app.include_router(wallet.router, prefix="/api/wallet", tags=["錢包"])
 app.include_router(checkin.router, prefix="/api/checkin", tags=["簽到"])
