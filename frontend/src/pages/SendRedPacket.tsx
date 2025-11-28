@@ -153,6 +153,8 @@ export default function SendRedPacket() {
           
           // 如果搜索結果已經顯示了狀態，直接選擇（不需要再次調用 API）
           setSelectedChat(chat)
+          // 立即保存到歷史記錄
+          saveChatToHistory(chat)
           setShowChatModal(false)
           setSearchQuery('')
           haptic('success')
@@ -195,6 +197,8 @@ export default function SendRedPacket() {
       
       // 選擇成功
       setSelectedChat(chat)
+      // 立即保存到歷史記錄
+      saveChatToHistory(chat)
       setShowChatModal(false)
       setSearchQuery('')
       haptic('success')
@@ -227,38 +231,54 @@ export default function SendRedPacket() {
 
   // 保存群組到歷史記錄
   const saveChatToHistory = (chat: ChatInfo) => {
-    if (typeof window === 'undefined' || !chat) return
-    
-    const storageKey = `redpacket_chat_history_${tgId || 'default'}`
-    const historyStr = localStorage.getItem(storageKey)
-    let history: ChatInfo[] = historyStr ? JSON.parse(historyStr) : []
-    
-    // 檢查是否已存在（根據 id）
-    const existingIndex = history.findIndex((c: ChatInfo) => c.id === chat.id)
-    if (existingIndex >= 0) {
-      // 更新現有記錄（移到最前面）
-      history.splice(existingIndex, 1)
+    if (typeof window === 'undefined' || !chat) {
+      console.warn('[saveChatToHistory] Invalid chat or window:', { chat, hasWindow: typeof window !== 'undefined' })
+      return
     }
     
-    // 添加到最前面
-    history.unshift({
-      ...chat,
-      last_used: new Date().toISOString(),
-    })
-    
-    // 限制最多保存 20 條記錄
-    history = history.slice(0, 20)
-    
-    localStorage.setItem(storageKey, JSON.stringify(history))
+    try {
+      const storageKey = `redpacket_chat_history_${tgId || 'default'}`
+      const historyStr = localStorage.getItem(storageKey)
+      let history: Array<ChatInfo & { last_used?: string }> = historyStr ? JSON.parse(historyStr) : []
+      
+      // 檢查是否已存在（根據 id）
+      const existingIndex = history.findIndex((c: ChatInfo) => c.id === chat.id)
+      if (existingIndex >= 0) {
+        // 更新現有記錄（移到最前面）
+        history.splice(existingIndex, 1)
+      }
+      
+      // 添加到最前面
+      const chatWithTimestamp: ChatInfo & { last_used?: string } = {
+        ...chat,
+        last_used: new Date().toISOString(),
+      }
+      history.unshift(chatWithTimestamp)
+      
+      // 限制最多保存 20 條記錄
+      history = history.slice(0, 20)
+      
+      localStorage.setItem(storageKey, JSON.stringify(history))
+      console.log('[saveChatToHistory] Saved chat to history:', { chatId: chat.id, chatTitle: chat.title, historyCount: history.length })
+    } catch (error) {
+      console.error('[saveChatToHistory] Error saving chat history:', error)
+    }
   }
 
   // 獲取群組歷史記錄
-  const getChatHistory = (): ChatInfo[] => {
+  const getChatHistory = (): Array<ChatInfo & { last_used?: string }> => {
     if (typeof window === 'undefined') return []
     
-    const storageKey = `redpacket_chat_history_${tgId || 'default'}`
-    const historyStr = localStorage.getItem(storageKey)
-    return historyStr ? JSON.parse(historyStr) : []
+    try {
+      const storageKey = `redpacket_chat_history_${tgId || 'default'}`
+      const historyStr = localStorage.getItem(storageKey)
+      const history = historyStr ? JSON.parse(historyStr) : []
+      console.log('[getChatHistory] Retrieved history:', { count: history.length, tgId, storageKey })
+      return history
+    } catch (error) {
+      console.error('[getChatHistory] Error reading chat history:', error)
+      return []
+    }
   }
 
   // 刪除群組歷史記錄
