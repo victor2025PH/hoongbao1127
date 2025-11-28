@@ -58,12 +58,6 @@ export default function SendRedPacket() {
     },
     enabled: searchQuery.length > 0,
     retry: 1,
-    onError: (error) => {
-      console.error('[Search] Error searching chats:', error)
-    },
-    onSuccess: (data) => {
-      console.log('[Search] Chats result:', data)
-    }
   })
 
   const { data: searchUsersResult, isLoading: isSearchingUsers, error: searchUsersError } = useQuery({
@@ -74,28 +68,38 @@ export default function SendRedPacket() {
     },
     enabled: searchQuery.length > 0,
     retry: 1,
-    onError: (error) => {
-      console.error('[Search] Error searching users:', error)
-    },
-    onSuccess: (data) => {
-      console.log('[Search] Users result:', data)
-    }
   })
+
+  // 調試日誌
+  useEffect(() => {
+    if (searchChatsResult) {
+      console.log('[Search] Chats result:', searchChatsResult)
+    }
+    if (searchChatsError) {
+      console.error('[Search] Error searching chats:', searchChatsError)
+    }
+    if (searchUsersResult) {
+      console.log('[Search] Users result:', searchUsersResult)
+    }
+    if (searchUsersError) {
+      console.error('[Search] Error searching users:', searchUsersError)
+    }
+  }, [searchChatsResult, searchChatsError, searchUsersResult, searchUsersError])
 
   // 合併所有搜索結果（群組和用戶），統一顯示
   const allSearchResults = useMemo(() => {
     const results: Array<ChatInfo & { isUser?: boolean }> = []
     
     // 添加群組結果
-    if (searchChatsResult) {
-      searchChatsResult.forEach(chat => {
+    if (searchChatsResult && Array.isArray(searchChatsResult)) {
+      searchChatsResult.forEach((chat: ChatInfo) => {
         results.push({ ...chat, isUser: false })
       })
     }
     
     // 添加用戶結果
-    if (searchUsersResult) {
-      searchUsersResult.forEach(user => {
+    if (searchUsersResult && Array.isArray(searchUsersResult)) {
+      searchUsersResult.forEach((user: ChatInfo) => {
         results.push({ ...user, isUser: true })
       })
     }
