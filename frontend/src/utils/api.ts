@@ -117,8 +117,10 @@ export async function getRedPacket(id: string): Promise<RedPacket> {
 
 export async function sendRedPacket(params: SendRedPacketParams): Promise<RedPacket> {
   // 轉換參數格式以匹配後端 API
+  // 將 currency 轉換為小寫（後端期望小寫：usdt, ton, stars, points）
+  const currency = (params.currency || 'USDT').toLowerCase()
   const requestBody: any = {
-    currency: params.currency || 'USDT',
+    currency: currency,
     packet_type: params.type || 'random',
     total_amount: params.amount,
     total_count: params.quantity,
