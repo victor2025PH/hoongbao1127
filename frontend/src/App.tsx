@@ -1,8 +1,11 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import BottomNav from './components/BottomNav'
 import TopToolbar from './components/TopToolbar'
 import Loading from './components/Loading'
+import AlertModal from './components/AlertModal'
+import ConfirmModal from './components/ConfirmModal'
+import { setAlertCallback, setConfirmCallback } from './utils/telegram'
 
 // 懒加载页面
 const WalletPage = lazy(() => import('./pages/WalletPage'))
@@ -17,6 +20,80 @@ const ExchangePage = lazy(() => import('./pages/ExchangePage'))
 const LuckyWheelPage = lazy(() => import('./pages/LuckyWheelPage'))
 
 export default function App() {
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean
+    message: string
+    type: 'success' | 'error' | 'warning' | 'info'
+    title?: string
+  }>({
+    isOpen: false,
+    message: '',
+    type: 'info',
+  })
+
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean
+    message: string
+    title?: string
+    confirmText?: string
+    cancelText?: string
+    onConfirm?: () => void
+    onCancel?: () => void
+  }>({
+    isOpen: false,
+    message: '',
+  })
+
+  // 設置全局 Alert 回調
+  useEffect(() => {
+    setAlertCallback((message, type = 'info', title) => {
+      setAlertState({
+        isOpen: true,
+        message,
+        type,
+        title,
+      })
+    })
+
+    setConfirmCallback((message, title, confirmText, cancelText) => {
+      return new Promise((resolve) => {
+        setConfirmState({
+          isOpen: true,
+          message,
+          title,
+          confirmText,
+          cancelText,
+          onConfirm: () => {
+            resolve(true)
+            setConfirmState(prev => ({ ...prev, isOpen: false, onConfirm: undefined, onCancel: undefined }))
+          },
+          onCancel: () => {
+            resolve(false)
+            setConfirmState(prev => ({ ...prev, isOpen: false, onConfirm: undefined, onCancel: undefined }))
+          },
+        })
+      })
+    })
+  }, [])
+
+  const closeAlert = () => {
+    setAlertState(prev => ({ ...prev, isOpen: false }))
+  }
+
+  const closeConfirm = () => {
+    if (confirmState.onCancel) {
+      confirmState.onCancel()
+    } else {
+      setConfirmState(prev => ({ ...prev, isOpen: false, onConfirm: undefined, onCancel: undefined }))
+    }
+  }
+
+  const handleConfirm = () => {
+    if (confirmState.onConfirm) {
+      confirmState.onConfirm()
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-brand-dark text-white flex flex-col overflow-hidden">
       <TopToolbar />
@@ -40,6 +117,27 @@ export default function App() {
       </main>
       
       <BottomNav />
+
+      {/* 全局 Alert 彈窗 */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={closeAlert}
+        message={alertState.message}
+        type={alertState.type}
+        title={alertState.title}
+      />
+
+      {/* 全局 Confirm 彈窗 */}
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        onClose={closeConfirm}
+        onConfirm={handleConfirm}
+        message={confirmState.message}
+        title={confirmState.title}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+        type="warning"
+      />
     </div>
   )
 }

@@ -119,15 +119,36 @@ export function haptic(type: 'light' | 'medium' | 'heavy' | 'success' | 'error' 
   }
 }
 
+// 全局彈窗管理器（用於在 miniapp 內部顯示，而不是使用 Telegram 系統彈窗）
+let alertCallback: ((message: string, type?: 'success' | 'error' | 'warning' | 'info', title?: string) => void) | null = null
+let confirmCallback: ((message: string, title?: string, confirmText?: string, cancelText?: string) => Promise<boolean>) | null = null
+
 /**
- * 顯示提示
+ * 設置 Alert 回調（由組件調用）
  */
-export function showAlert(message: string): Promise<void> {
+export function setAlertCallback(callback: (message: string, type?: 'success' | 'error' | 'warning' | 'info', title?: string) => void) {
+  alertCallback = callback
+}
+
+/**
+ * 設置 Confirm 回調（由組件調用）
+ */
+export function setConfirmCallback(callback: (message: string, title?: string, confirmText?: string, cancelText?: string) => Promise<boolean>) {
+  confirmCallback = callback
+}
+
+/**
+ * 顯示提示（在 miniapp 內部顯示，不使用 Telegram 系統彈窗）
+ */
+export function showAlert(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', title?: string): Promise<void> {
   return new Promise((resolve) => {
-    const webApp = window.Telegram?.WebApp
-    if (webApp) {
-      webApp.showAlert(message, resolve)
+    if (alertCallback) {
+      alertCallback(message, type, title)
+      // 延遲 resolve，讓用戶有時間看到彈窗
+      setTimeout(resolve, 100)
     } else {
+      // 如果沒有設置回調，回退到瀏覽器 alert（僅用於開發環境）
+      console.warn('[showAlert] Alert callback not set, using fallback')
       alert(message)
       resolve()
     }
@@ -135,14 +156,15 @@ export function showAlert(message: string): Promise<void> {
 }
 
 /**
- * 顯示確認框
+ * 顯示確認框（在 miniapp 內部顯示，不使用 Telegram 系統彈窗）
  */
-export function showConfirm(message: string): Promise<boolean> {
+export function showConfirm(message: string, title?: string, confirmText?: string, cancelText?: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const webApp = window.Telegram?.WebApp
-    if (webApp) {
-      webApp.showConfirm(message, resolve)
+    if (confirmCallback) {
+      confirmCallback(message, title, confirmText, cancelText).then(resolve)
     } else {
+      // 如果沒有設置回調，回退到瀏覽器 confirm（僅用於開發環境）
+      console.warn('[showConfirm] Confirm callback not set, using fallback')
       resolve(confirm(message))
     }
   })

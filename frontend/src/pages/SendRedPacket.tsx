@@ -116,54 +116,40 @@ export default function SendRedPacket() {
       if (chat.type !== 'private') {
         // 如果搜索結果已經包含完整的狀態信息，直接處理選擇邏輯
         if (chat.user_in_group !== undefined && chat.bot_in_group !== undefined) {
-          // 如果 Bot 不在群組中，提示用戶（但不阻止選擇，可以通過鏈接發送）
-          if (chat.bot_in_group === false) {
-            const telegram = window.Telegram?.WebApp
-            if (telegram) {
-              await new Promise<void>((resolve) => {
-                telegram.showAlert(
-                  '⚠️ 機器人不在群組中\n\n您仍然可以選擇此群組，發送紅包時會生成分享鏈接，您可以手動分享到群組中。',
-                  () => resolve()
-                )
-              })
-            } else {
-              showAlert('⚠️ 機器人不在群組中，發送紅包時會生成分享鏈接')
-            }
-            // 不 return，繼續選擇流程
-          }
+        // 如果 Bot 不在群組中，提示用戶（但不阻止選擇，可以通過鏈接發送）
+        if (chat.bot_in_group === false) {
+          await showAlert(
+            '⚠️ 機器人不在群組中\n\n您仍然可以選擇此群組，發送紅包時會生成分享鏈接，您可以手動分享到群組中。',
+            'warning'
+          )
+          // 不 return，繼續選擇流程
+        }
           
-          // 如果用戶不在群組中，提示加入
-          if (chat.user_in_group === false) {
-            const groupLink = chat.link
-            if (groupLink) {
-              const telegram = window.Telegram?.WebApp
-              if (telegram) {
-                const shouldJoin = await new Promise<boolean>((resolve) => {
-                  telegram.showConfirm(
-                    '⚠️ 您尚未加入此群組\n\n是否現在加入？',
-                    (confirmed) => resolve(confirmed)
-                  )
-                })
-                if (shouldJoin) {
-                  telegram.openLink(groupLink)
-                  return // 用戶選擇加入群組，取消選擇
-                } else {
-                  // 用戶選擇不加入，仍然允許選擇（可能想先選擇，稍後加入）
-                  // 繼續選擇流程
-                }
-              } else {
-                const shouldContinue = await showConfirm('⚠️ 您尚未加入此群組\n\n是否仍然選擇此群組？')
-                if (!shouldContinue) {
-                  return
-                }
-              }
-            } else {
-              const shouldContinue = await showConfirm('⚠️ 您尚未加入此群組\n\n是否仍然選擇此群組？')
-              if (!shouldContinue) {
-                return
-              }
+        // 如果用戶不在群組中，提示加入
+        if (chat.user_in_group === false) {
+          const groupLink = chat.link
+          if (groupLink) {
+            const telegram = window.Telegram?.WebApp
+            const shouldJoin = await showConfirm(
+              '⚠️ 您尚未加入此群組\n\n是否現在加入？',
+              undefined,
+              '加入',
+              '取消'
+            )
+            if (shouldJoin && telegram) {
+              telegram.openLink(groupLink)
+              return // 用戶選擇加入群組，取消選擇
+            } else if (!shouldJoin) {
+              // 用戶選擇不加入，仍然允許選擇（可能想先選擇，稍後加入）
+              // 繼續選擇流程
+            }
+          } else {
+            const shouldContinue = await showConfirm('⚠️ 您尚未加入此群組\n\n是否仍然選擇此群組？')
+            if (!shouldContinue) {
+              return
             }
           }
+        }
           
           // 如果搜索結果已經顯示了狀態，直接選擇（不需要再次調用 API）
           setSelectedChat(chat)
@@ -183,21 +169,17 @@ export default function SendRedPacket() {
           const groupLink = chat.link
           if (groupLink) {
             const telegram = window.Telegram?.WebApp
-            if (telegram) {
-              const shouldJoin = await new Promise<boolean>((resolve) => {
-                telegram.showConfirm(
-                  t('join_group_first') + '\n\n' + t('open_group_link'),
-                  (confirmed) => resolve(confirmed)
-                )
-              })
-              if (shouldJoin) {
-                telegram.openLink(groupLink)
-              }
-            } else {
-              showAlert(t('join_group_first'))
+            const shouldJoin = await showConfirm(
+              t('join_group_first') + '\n\n' + t('open_group_link'),
+              undefined,
+              '加入',
+              '取消'
+            )
+            if (shouldJoin && telegram) {
+              telegram.openLink(groupLink)
             }
           } else {
-            showAlert(checkResult.message || t('user_not_in_group'))
+            showAlert(checkResult.message || t('user_not_in_group'), 'warning')
           }
           return
         }
@@ -216,7 +198,7 @@ export default function SendRedPacket() {
       setShowChatModal(false)
       setSearchQuery('')
       haptic('success')
-      showAlert('✅ 已選擇 ' + chat.title)
+      showAlert('✅ 已選擇 ' + chat.title, 'success')
     } catch (error: any) {
       haptic('error')
       console.error('選擇群組失敗:', error)
@@ -224,23 +206,20 @@ export default function SendRedPacket() {
         const groupLink = chat.link
         if (groupLink) {
           const telegram = window.Telegram?.WebApp
-          if (telegram) {
-            telegram.showConfirm(
-              t('join_group_first') + '\n\n' + t('open_group_link'),
-              (confirmed) => {
-                if (confirmed) {
-                  telegram.openLink(groupLink)
-                }
-              }
-            )
-          } else {
-            showAlert(t('join_group_first'))
+          const shouldJoin = await showConfirm(
+            t('join_group_first') + '\n\n' + t('open_group_link'),
+            undefined,
+            '加入',
+            '取消'
+          )
+          if (shouldJoin && telegram) {
+            telegram.openLink(groupLink)
           }
         } else {
-          showAlert(t('join_group_first'))
+          showAlert(t('join_group_first'), 'warning')
         }
       } else {
-        showAlert(error.message || '選擇失敗，請重試')
+        showAlert(error.message || '選擇失敗，請重試', 'error')
       }
     }
   }
@@ -256,45 +235,42 @@ export default function SendRedPacket() {
       // 如果機器人不在群組中，顯示分享鏈接
       if (!data.message_sent && data.share_link) {
         const telegram = window.Telegram?.WebApp
-        if (telegram) {
-          telegram.showConfirm(
-            t('bot_not_in_group') + '\n\n' + t('share_red_packet_link'),
-            (confirmed) => {
-              if (confirmed) {
-                telegram.openLink(data.share_link)
-              }
-            }
-          )
-        } else {
-          showAlert(t('bot_not_in_group') + '\n' + t('share_link') + ': ' + data.share_link)
+        const shouldShare = await showConfirm(
+          t('bot_not_in_group') + '\n\n' + t('share_red_packet_link'),
+          undefined,
+          '分享',
+          '取消'
+        )
+        if (shouldShare && telegram) {
+          telegram.openLink(data.share_link)
         }
       } else {
-        showAlert(t('success'))
+        showAlert(t('success'), 'success')
       }
       
       navigate('/packets')
     },
     onError: (error: Error) => {
       haptic('error')
-      showAlert(error.message)
+      showAlert(error.message, 'error')
     },
   })
 
   const handleSubmit = () => {
     if (!selectedChat) {
-      showAlert(t('select_group'))
+      showAlert(t('select_group'), 'warning')
       return
     }
     if (!amount || parseFloat(amount) <= 0) {
-      showAlert(t('enter_amount'))
+      showAlert(t('enter_amount'), 'warning')
       return
     }
     if (!quantity || parseInt(quantity) < 1) {
-      showAlert(t('enter_quantity'))
+      showAlert(t('enter_quantity'), 'warning')
       return
     }
     if (packetType === 'fixed' && bombNumber === null) {
-      showAlert(t('bomb_number_required'))
+      showAlert(t('bomb_number_required'), 'warning')
       return
     }
 
