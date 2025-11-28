@@ -16,16 +16,19 @@ export default function Login() {
     setLoading(true)
     try {
       const response = await authApi.login(values.username, values.password)
-      if (response.data.success) {
-        setAuth(response.data.token, response.data.admin)
+      console.log('Login response:', response)
+      const data = response.data
+      if (data && data.success) {
+        setAuth(data.token, data.admin)
         navigate('/')
         message.success('登錄成功')
       } else {
-        message.error('登錄失敗')
+        message.error(data?.detail || '登錄失敗')
       }
     } catch (error: any) {
       console.error('Login error:', error)
-      const errorMsg = error.response?.data?.detail || error.message || '登錄失敗'
+      console.error('Error response:', error.response)
+      const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || '登錄失敗'
       message.error(errorMsg)
       
       // 临时开发模式：如果登录失败但用户名密码正确，尝试直接设置测试 token
