@@ -255,7 +255,7 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 標記最佳手氣（僅手氣最佳類型，當紅包搶完時）
         is_luckiest = False
         if packet.packet_type == RedPacketType.RANDOM and packet.claimed_count >= packet.total_count:
-            # 查找所有搶包記錄，找出金額最大的
+            # 查找所有搶包記錄（包括剛創建的），找出金額最大的
             all_existing_claims = db.query(RedPacketClaim).filter(
                 RedPacketClaim.red_packet_id == packet.id
             ).all()
@@ -284,6 +284,9 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if packet.claimed_count >= packet.total_count:
             packet.status = RedPacketStatus.COMPLETED
             packet.completed_at = datetime.utcnow()
+        
+        # 保存 is_luckiest 到變量（在會話內）
+        is_luckiest_value = is_luckiest
         
         # 更新用戶餘額（根據貨幣類型）
         currency_field_map = {
@@ -342,6 +345,9 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         is_bomb_value = claim.is_bomb if hasattr(claim, 'is_bomb') else False
         penalty_amount_value = claim.penalty_amount if hasattr(claim, 'penalty_amount') and claim.penalty_amount else None
         
+        # 保存 is_luckiest（在會話內讀取）
+        is_luckiest_value = is_luckiest
+        
         # 獲取所有已搶紅包的記錄（在同一個會話中查詢，避免 DetachedInstanceError）
         all_claims = db.query(RedPacketClaim).filter(
             RedPacketClaim.red_packet_id == packet_id
@@ -376,13 +382,21 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_bomb_value and penalty_amount_value:
         thunder_type = "單雷" if total_count == 10 else "雙雷"
         alert_text = f"💣 踩雷了！需要賠付 {float(penalty_amount_value):.2f} {currency_symbol}（{thunder_type}）"
-    elif is_luckiest and packet_status == RedPacketStatus.COMPLETED:
+    elif is_luckiest_value and packet_status == RedPacketStatus.COMPLETED:
         alert_text = f"🎉 恭喜獲得 {float(claim_amount):.4f} {currency_symbol}！\n🏆 你是最佳手氣！"
     else:
         alert_text = f"🎉 恭喜獲得 {float(claim_amount):.4f} {currency_symbol}！"
     
-    # 確保彈窗提示始終顯示
-    await query.answer(alert_text, show_alert=True)
+    # 確保彈窗提示始終顯示（無論什麼情況）
+    try:
+        await query.answer(alert_text, show_alert=True)
+    except Exception as e:
+        logger.error(f"Failed to show alert: {e}")
+        # 如果彈窗失敗，至少嘗試簡單的 answer
+        try:
+            await query.answer("處理完成", show_alert=False)
+        except:
+            pass
     
     # 更新消息（使用已保存的變量，而不是數據庫對象）
     text = f"""
