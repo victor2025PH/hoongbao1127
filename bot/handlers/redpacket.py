@@ -322,6 +322,24 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await query.answer(f"🎉 恭喜獲得 {float(claim_amount):.4f} {currency_symbol}！", show_alert=True)
     
+    # 獲取所有已搶紅包的記錄（在數據庫會話外查詢）
+    with get_db() as db:
+        all_claims = db.query(RedPacketClaim).filter(
+            RedPacketClaim.red_packet_id == packet.id
+        ).order_by(RedPacketClaim.claimed_at.asc()).all()
+        
+        # 獲取所有搶包用戶的信息
+        claimers_info = []
+        for claim_record in all_claims:
+            claimer_user = db.query(User).filter(User.id == claim_record.user_id).first()
+            if claimer_user:
+                claimers_info.append({
+                    'name': claimer_user.first_name or '用戶',
+                    'amount': float(claim_record.amount),
+                    'is_bomb': claim_record.is_bomb if hasattr(claim_record, 'is_bomb') else False,
+                    'penalty': float(claim_record.penalty_amount) if hasattr(claim_record, 'penalty_amount') and claim_record.penalty_amount else None,
+                })
+    
     # 更新消息（使用已保存的變量，而不是數據庫對象）
     text = f"""
 🧧 *{sender_name} 發了一個紅包*
@@ -336,11 +354,15 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     text += f"📝 {packet_message}\n\n"
     
-    # 顯示搶包結果
-    if is_bomb and penalty_amount:
-        text += f"💣 {user.first_name} 搶到了 {float(claim_amount):.4f} {currency_symbol}，踩雷了！需賠付 {float(penalty_amount):.2f} {currency_symbol}\n"
-    else:
-        text += f"{user.first_name} 搶到了 {float(claim_amount):.4f} {currency_symbol}！\n"
+    # 顯示所有已搶紅包的用戶和金額
+    if claimers_info:
+        text += "已搶紅包：\n"
+        for idx, claimer in enumerate(claimers_info, 1):
+            if claimer['is_bomb'] and claimer['penalty']:
+                text += f"{idx}. {claimer['name']} 搶到了 {claimer['amount']:.4f} {currency_symbol}，💣 踩雷了！需賠付 {claimer['penalty']:.2f} {currency_symbol}\n"
+            else:
+                text += f"{idx}. {claimer['name']} 搶到了 {claimer['amount']:.4f} {currency_symbol}！\n"
+        text += "\n"
     
     if packet_status == RedPacketStatus.COMPLETED:
         text += "\n✅ 紅包已搶完"
