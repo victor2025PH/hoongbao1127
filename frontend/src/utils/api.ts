@@ -152,10 +152,12 @@ export interface ChatInfo {
   id: number
   title: string
   type: string
+  username?: string  // 群組或用戶名
   link?: string  // 群組鏈接（用於基於鏈接的群組）
   user_in_group?: boolean  // 用戶是否在群組中
   bot_in_group?: boolean  // Bot 是否在群組中
   status_message?: string  // 狀態提示信息
+  last_used?: string  // 最後使用時間（用於歷史記錄）
 }
 
 export async function getUserChats(): Promise<ChatInfo[]> {
