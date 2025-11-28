@@ -14,7 +14,7 @@ from shared.database.models import CheckinRecord, User
 from api.utils.auth import get_current_active_admin, AdminUser
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/v1/admin/checkin", tags=["Admin - Checkin"])
+router = APIRouter(prefix="/api/v1/admin/checkin", tags=["管理后台-签到管理"])
 
 
 class CheckinListItem(BaseModel):

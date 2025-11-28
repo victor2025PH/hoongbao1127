@@ -14,7 +14,7 @@ from shared.database.models import RedPacket, RedPacketClaim, User, RedPacketSta
 from api.utils.auth import get_current_admin
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/v1/admin/redpackets", tags=["Admin - RedPackets"])
+router = APIRouter(prefix="/api/v1/admin/redpackets", tags=["管理后台-红包管理"])
 
 
 # Pydantic 模型

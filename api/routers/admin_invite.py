@@ -13,7 +13,7 @@ from shared.database.models import User, Transaction
 from api.utils.auth import get_current_active_admin, AdminUser
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/v1/admin/invite", tags=["Admin - Invite"])
+router = APIRouter(prefix="/api/v1/admin/invite", tags=["管理后台-邀请管理"])
 
 
 class InviteRelationItem(BaseModel):

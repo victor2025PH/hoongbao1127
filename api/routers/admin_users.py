@@ -16,6 +16,127 @@ from api.utils.auth import get_current_active_admin, AdminUser, get_current_admi
 router = APIRouter(prefix="/api/v1/admin/users", tags=["管理后台-用户管理"])
 
 
+class UserListItem(BaseModel):
+    """用户列表项"""
+    id: int
+    tg_id: int
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    level: int = 1
+    balance_usdt: float = 0.0
+    balance_ton: float = 0.0
+    balance_stars: int = 0
+    balance_points: int = 0
+    is_banned: bool = False
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+@router.get("/list")
+async def list_users(
+    search: Optional[str] = Query(None, description="搜索关键词（用户名、Telegram ID）"),
+    level: Optional[int] = Query(None, description="等级筛选"),
+    is_banned: Optional[bool] = Query(None, description="封禁状态筛选"),
+    min_balance_usdt: Optional[float] = Query(None, description="最小USDT余额"),
+    max_balance_usdt: Optional[float] = Query(None, description="最大USDT余额"),
+    created_from: Optional[str] = Query(None, description="注册开始时间（ISO格式）"),
+    created_to: Optional[str] = Query(None, description="注册结束时间（ISO格式）"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    db: AsyncSession = Depends(get_db_session),
+    admin: AdminUser = Depends(get_current_active_admin)
+):
+    """获取用户列表（支持搜索和筛选）"""
+    query = select(User)
+    
+    # 搜索条件
+    if search:
+        try:
+            search_int = int(search)
+            query = query.where(or_(
+                User.tg_id == search_int,
+                User.username.ilike(f"%{search}%"),
+                User.first_name.ilike(f"%{search}%")
+            ))
+        except ValueError:
+            query = query.where(or_(
+                User.username.ilike(f"%{search}%"),
+                User.first_name.ilike(f"%{search}%")
+            ))
+    
+    # 筛选条件
+    if level is not None:
+        query = query.where(User.level == level)
+    
+    if is_banned is not None:
+        query = query.where(User.is_banned == is_banned)
+    
+    if min_balance_usdt is not None:
+        query = query.where(User.balance_usdt >= min_balance_usdt)
+    
+    if max_balance_usdt is not None:
+        query = query.where(User.balance_usdt <= max_balance_usdt)
+    
+    if created_from:
+        try:
+            from_date = datetime.fromisoformat(created_from.replace('Z', '+00:00'))
+            query = query.where(User.created_at >= from_date)
+        except ValueError:
+            pass
+    
+    if created_to:
+        try:
+            to_date = datetime.fromisoformat(created_to.replace('Z', '+00:00'))
+            query = query.where(User.created_at <= to_date)
+        except ValueError:
+            pass
+    
+    # 获取总数
+    total_count_result = await db.execute(select(func.count()).select_from(query.subquery()))
+    total_count = total_count_result.scalar_one()
+    
+    # 分页查询
+    offset = (page - 1) * limit
+    users_result = await db.execute(
+        query.order_by(User.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    users = users_result.scalars().all()
+    
+    # 转换为响应模型
+    user_list = [
+        UserListItem(
+            id=user.id,
+            tg_id=user.tg_id,
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            level=user.level or 1,
+            balance_usdt=float(user.balance_usdt or 0),
+            balance_ton=float(user.balance_ton or 0),
+            balance_stars=user.balance_stars or 0,
+            balance_points=user.balance_points or 0,
+            is_banned=user.is_banned or False,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
+        for user in users
+    ]
+    
+    return {
+        "success": True,
+        "data": user_list,
+        "total": total_count,
+        "page": page,
+        "limit": limit
+    }
+
+
 class AdjustBalanceRequest(BaseModel):
     user_id: int
     currency: str  # usdt, ton, stars, points

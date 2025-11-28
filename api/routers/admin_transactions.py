@@ -15,7 +15,7 @@ from sqlalchemy.orm import joinedload
 from api.utils.auth import get_current_admin
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/v1/admin/transactions", tags=["Admin - Transactions"])
+router = APIRouter(prefix="/api/v1/admin/transactions", tags=["管理后台-交易管理"])
 
 
 # Pydantic 模型
