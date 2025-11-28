@@ -163,7 +163,7 @@ export default function UserManagement() {
       })
       
       // 导出为 CSV
-      const users = response.data.data.users
+      const users = response.data.data || []
       const headers = ['ID', 'Telegram ID', '用戶名', '姓名', 'USDT餘額', 'TON餘額', 'Stars餘額', 'Points餘額', '等級', '狀態', '註冊時間']
       const rows = users.map((u: any) => [
         u.id,
