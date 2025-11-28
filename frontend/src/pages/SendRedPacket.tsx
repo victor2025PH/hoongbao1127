@@ -219,7 +219,8 @@ export default function SendRedPacket() {
           showAlert(t('join_group_first'), 'warning')
         }
       } else {
-        showAlert(error.message || '選擇失敗，請重試', 'error')
+        const errorMessage = typeof error.message === 'string' ? error.message : String(error.message || '選擇失敗，請重試')
+        showAlert(errorMessage, 'error')
       }
     }
   }
@@ -252,7 +253,8 @@ export default function SendRedPacket() {
     },
     onError: (error: Error) => {
       haptic('error')
-      showAlert(error.message, 'error')
+      const errorMessage = typeof error.message === 'string' ? error.message : String(error.message || '發送失敗，請重試')
+      showAlert(errorMessage, 'error')
     },
   })
 

@@ -47,11 +47,14 @@ export default function App() {
   // 設置全局 Alert 回調
   useEffect(() => {
     setAlertCallback((message, type = 'info', title) => {
+      // 確保 message 和 title 都是字符串
+      const messageStr = typeof message === 'string' ? message : String(message || '')
+      const titleStr = title && typeof title === 'string' ? title : undefined
       setAlertState({
         isOpen: true,
-        message,
+        message: messageStr,
         type,
-        title,
+        title: titleStr,
       })
     })
 

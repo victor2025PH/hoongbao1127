@@ -31,8 +31,15 @@ api.interceptors.response.use(
     }
     return response.data
   },
-  (error) => {
-    const message = error.response?.data?.detail || error.message || '請求失敗'
+  (error: any) => {
+    let message = '請求失敗'
+    if (error.response?.data?.detail) {
+      message = typeof error.response.data.detail === 'string' 
+        ? error.response.data.detail 
+        : JSON.stringify(error.response.data.detail)
+    } else if (error.message) {
+      message = typeof error.message === 'string' ? error.message : String(error.message)
+    }
     console.error('[API Error]', error.config?.url, message, error.response?.data)
     // 對於搜索 API，如果返回空數組，不應該視為錯誤
     if (error.config?.url?.includes('/search') && error.response?.status === 200) {

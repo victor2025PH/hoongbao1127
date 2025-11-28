@@ -71,10 +71,12 @@ export default function AlertModal({
 
             {/* 內容 */}
             <div className="flex-1 min-w-0">
-              {title && (
+              {title && typeof title === 'string' && (
                 <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
               )}
-              <p className="text-sm text-gray-200 whitespace-pre-line">{message}</p>
+              <p className="text-sm text-gray-200 whitespace-pre-line">
+                {typeof message === 'string' ? message : String(message || '')}
+              </p>
             </div>
           </div>
 
