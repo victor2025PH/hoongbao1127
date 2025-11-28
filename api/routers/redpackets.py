@@ -27,12 +27,13 @@ bot = Bot(token=settings.BOT_TOKEN)
 class CreateRedPacketRequest(BaseModel):
     """創建紅包請求"""
     currency: Union[CurrencyType, str] = CurrencyType.USDT
-    packet_type: RedPacketType = RedPacketType.RANDOM
+    packet_type: Union[RedPacketType, str] = RedPacketType.RANDOM
     total_amount: float = Field(..., gt=0)
     total_count: int = Field(..., ge=1, le=100)
     message: str = Field(default="恭喜發財！🧧", max_length=256)
     chat_id: Optional[int] = None
     chat_title: Optional[str] = None
+    bomb_number: Optional[int] = None  # 紅包炸彈數字（0-9）
     
     @field_validator('currency', mode='before')
     @classmethod
@@ -47,6 +48,22 @@ class CreateRedPacketRequest(BaseModel):
                 "points": CurrencyType.POINTS,
             }
             return currency_map.get(v_lower, CurrencyType.USDT)
+        return v
+    
+    @field_validator('packet_type', mode='before')
+    @classmethod
+    def normalize_packet_type(cls, v):
+        """將 packet_type 轉換並映射到 RedPacketType 枚舉"""
+        if isinstance(v, str):
+            v_lower = v.lower()
+            # 映射前端使用的 'fixed' 到后端的 'equal'（平分）
+            packet_type_map = {
+                "random": RedPacketType.RANDOM,
+                "fixed": RedPacketType.EQUAL,  # 固定金額 = 平分
+                "equal": RedPacketType.EQUAL,
+                "exclusive": RedPacketType.EXCLUSIVE,
+            }
+            return packet_type_map.get(v_lower, RedPacketType.RANDOM)
         return v
 
 
