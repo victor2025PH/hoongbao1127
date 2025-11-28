@@ -16,6 +16,7 @@ from loguru import logger
 from shared.config.settings import get_settings
 from shared.database.connection import init_db
 from api.routers import auth, users, redpackets, wallet, checkin, chats, messages
+from api.routers import admin_telegram, admin_reports, admin_auth, admin_dashboard, admin_users, admin_redpackets, admin_transactions, admin_checkin, admin_invite
 
 settings = get_settings()
 
@@ -91,6 +92,17 @@ app.include_router(wallet.router, prefix="/api/wallet", tags=["錢包"])
 app.include_router(checkin.router, prefix="/api/checkin", tags=["簽到"])
 app.include_router(chats.router, prefix="/api/v1/chats", tags=["群組"])
 app.include_router(messages.router, prefix="/api/v1/messages", tags=["消息"])
+
+# 管理后台路由
+app.include_router(admin_auth.router, tags=["管理后台-认证"])
+app.include_router(admin_dashboard.router, tags=["管理后台-仪表盘"])
+app.include_router(admin_telegram.router, tags=["管理后台-Telegram"])
+app.include_router(admin_reports.router, tags=["管理后台-报表"])
+app.include_router(admin_users.router, tags=["管理后台-用户管理"])
+app.include_router(admin_redpackets.router, tags=["管理后台-红包管理"])
+app.include_router(admin_transactions.router, tags=["管理后台-交易管理"])
+app.include_router(admin_checkin.router, tags=["管理后台-签到管理"])
+app.include_router(admin_invite.router, tags=["管理后台-邀请管理"])
 
 
 if __name__ == "__main__":

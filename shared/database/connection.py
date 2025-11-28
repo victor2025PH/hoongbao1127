@@ -6,12 +6,14 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from contextlib import contextmanager, asynccontextmanager
 from typing import Generator, AsyncGenerator
+from pathlib import Path
 import os
 
 from shared.config.settings import get_settings
 from shared.database.models import Base
 
 settings = get_settings()
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # 獲取數據庫 URL，支持 SQLite 本地開發
 database_url = settings.DATABASE_URL
@@ -21,16 +23,25 @@ is_sqlite = database_url.startswith("sqlite")
 
 if is_sqlite:
     # SQLite 配置
+    # 确保使用绝对路径
+    if database_url.startswith("sqlite:///./"):
+        # 相对路径，转换为绝对路径
+        db_path = database_url.replace("sqlite:///./", "")
+        db_abs_path = str(BASE_DIR / db_path)
+        database_url = f"sqlite:///{db_abs_path}"
+    
     sync_engine = create_engine(
         database_url,
         connect_args={"check_same_thread": False},  # SQLite 需要這個參數
     )
     
     # SQLite 異步需要 aiosqlite
+    # 使用绝对路径
     async_database_url = database_url.replace("sqlite:///", "sqlite+aiosqlite:///")
     async_engine = create_async_engine(
         async_database_url,
         connect_args={"check_same_thread": False},
+        echo=False,  # 调试时可以设为 True
     )
 else:
     # PostgreSQL 配置

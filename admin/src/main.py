@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 from shared.database.connection import SyncSessionLocal
 from shared.database.models import User, RedPacket, Transaction, CheckinRecord
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, String
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pydantic import BaseModel
@@ -100,12 +100,24 @@ def get_stats(db=Depends(get_db)):
 
 
 @app.get("/api/users")
-def get_users(page: int = 1, limit: int = 20, db=Depends(get_db)):
-    """獲取用戶列表"""
+def get_users(page: int = 1, limit: int = 20, search: Optional[str] = None, db=Depends(get_db)):
+    """獲取用戶列表（支持搜索）"""
     try:
         offset = (page - 1) * limit
-        users = db.query(User).order_by(desc(User.created_at)).offset(offset).limit(limit).all()
-        total = db.query(func.count(User.id)).scalar() or 0
+        query = db.query(User)
+        
+        # 搜索功能
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                (User.username.like(search_term)) |
+                (User.tg_id.cast(String).like(search_term)) |
+                (User.first_name.like(search_term)) |
+                (User.last_name.like(search_term))
+            )
+        
+        users = query.order_by(desc(User.created_at)).offset(offset).limit(limit).all()
+        total = query.count()
         
         return {
             "success": True,
@@ -115,9 +127,16 @@ def get_users(page: int = 1, limit: int = 20, db=Depends(get_db)):
                         "id": u.id,
                         "telegram_id": u.tg_id,
                         "username": u.username,
-                        "balance": float(u.balance_usdt) if u.balance_usdt else 0,
+                        "first_name": u.first_name,
+                        "last_name": u.last_name,
+                        "balance_usdt": float(u.balance_usdt) if u.balance_usdt else 0,
+                        "balance_ton": float(u.balance_ton) if u.balance_ton else 0,
+                        "balance_stars": u.balance_stars or 0,
+                        "balance_points": u.balance_points or 0,
                         "energy": u.xp,
                         "level": u.level,
+                        "is_banned": u.is_banned,
+                        "is_admin": u.is_admin,
                         "created_at": u.created_at.isoformat() if u.created_at else None
                     }
                     for u in users
@@ -288,7 +307,80 @@ def get_user(user_id: int, db=Depends(get_db)):
                 "level": user.level,
                 "xp": user.xp,
                 "is_banned": user.is_banned,
+                "is_admin": user.is_admin,
                 "created_at": user.created_at.isoformat() if user.created_at else None
+            }
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# 机器人绑定请求模型
+class BindBotRequest(BaseModel):
+    user_id: int
+    bot_username: Optional[str] = None
+    bot_id: Optional[int] = None
+
+
+@app.post("/api/bind-bot")
+def bind_bot(request: BindBotRequest, db=Depends(get_db)):
+    """绑定机器人到用户（如果数据库有相关字段）"""
+    try:
+        user = db.query(User).filter(User.id == request.user_id).first()
+        if not user:
+            return {"success": False, "error": "用戶不存在"}
+        
+        # 注意：如果 User 模型中没有 bot_id 或 bot_username 字段，需要先添加
+        # 这里先返回成功，实际绑定逻辑需要根据数据库模型调整
+        # 如果需要在 User 表中添加 bot_id 字段，需要数据库迁移
+        
+        return {
+            "success": True,
+            "data": {
+                "user_id": user.id,
+                "message": "机器人绑定功能需要先在数据库模型中添加 bot_id 字段"
+            }
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/search-users")
+def search_users(q: str, limit: int = 20, db=Depends(get_db)):
+    """搜索用户（通过 Telegram ID、用户名等）"""
+    try:
+        if not q:
+            return {"success": False, "error": "搜索关键词不能为空"}
+        
+        search_term = f"%{q}%"
+        users = db.query(User).filter(
+            (User.username.like(search_term)) |
+            (User.tg_id.cast(String).like(search_term)) |
+            (User.first_name.like(search_term)) |
+            (User.last_name.like(search_term))
+        ).limit(limit).all()
+        
+        return {
+            "success": True,
+            "data": {
+                "users": [
+                    {
+                        "id": u.id,
+                        "telegram_id": u.tg_id,
+                        "username": u.username,
+                        "first_name": u.first_name,
+                        "last_name": u.last_name,
+                        "balance_usdt": float(u.balance_usdt) if u.balance_usdt else 0,
+                        "balance_ton": float(u.balance_ton) if u.balance_ton else 0,
+                        "balance_stars": u.balance_stars or 0,
+                        "balance_points": u.balance_points or 0,
+                        "level": u.level,
+                        "is_banned": u.is_banned,
+                        "is_admin": u.is_admin
+                    }
+                    for u in users
+                ],
+                "count": len(users)
             }
         }
     except Exception as e:

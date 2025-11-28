@@ -285,3 +285,181 @@ class UserNotificationSettings(Base):
     # 關聯
     user = relationship("User", back_populates="notification_settings")
 
+
+# ==================== 管理后台新增表 ====================
+
+class AdminUser(Base):
+    """管理員用戶表"""
+    __tablename__ = "admin_users"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(64), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    email = Column(String(128), nullable=True)
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
+    is_active = Column(Boolean, default=True)
+    last_login_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # 關聯
+    role = relationship("Role", back_populates="admin_users")
+
+
+class Role(Base):
+    """角色表"""
+    __tablename__ = "roles"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(64), unique=True, nullable=False)
+    description = Column(Text, nullable=True)
+    permissions = Column(JSON, nullable=True)  # 權限列表 JSON
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # 關聯
+    admin_users = relationship("AdminUser", back_populates="role")
+
+
+class AdminLog(Base):
+    """管理員操作日志表"""
+    __tablename__ = "admin_logs"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    admin_id = Column(Integer, ForeignKey("admin_users.id"), nullable=False)
+    action_type = Column(String(64), nullable=False)  # create, update, delete, etc.
+    resource_type = Column(String(64), nullable=False)  # user, red_packet, etc.
+    resource_id = Column(String(64), nullable=True)
+    old_data = Column(JSON, nullable=True)
+    new_data = Column(JSON, nullable=True)
+    ip_address = Column(String(64), nullable=True)
+    user_agent = Column(String(512), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    
+    __table_args__ = (
+        Index("ix_admin_logs_admin_id", "admin_id"),
+        Index("ix_admin_logs_resource", "resource_type", "resource_id"),
+    )
+
+
+class SystemConfig(Base):
+    """系統配置表"""
+    __tablename__ = "system_configs"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    key = Column(String(128), unique=True, nullable=False, index=True)
+    value = Column(JSON, nullable=True)
+    description = Column(Text, nullable=True)
+    updated_by = Column(Integer, ForeignKey("admin_users.id"), nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class TelegramGroup(Base):
+    """Telegram 群組表"""
+    __tablename__ = "telegram_groups"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    chat_id = Column(BigInteger, unique=True, nullable=False, index=True)
+    title = Column(String(256), nullable=True)
+    type = Column(String(32), nullable=True)  # group, supergroup, channel
+    username = Column(String(128), nullable=True, index=True)
+    member_count = Column(Integer, nullable=True)
+    bot_status = Column(String(32), nullable=True)  # member, administrator, creator, left, kicked
+    invite_link = Column(String(512), nullable=True)
+    description = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    last_message_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        Index("ix_tg_groups_chat_id", "chat_id"),
+        Index("ix_tg_groups_username", "username"),
+    )
+
+
+class TelegramMessage(Base):
+    """Telegram 消息記錄表"""
+    __tablename__ = "telegram_messages"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    message_id = Column(BigInteger, nullable=True)  # Telegram 消息 ID
+    chat_id = Column(BigInteger, nullable=False, index=True)  # 群組/用戶 ID
+    chat_type = Column(String(32), nullable=True)  # group, supergroup, private
+    from_user_id = Column(BigInteger, nullable=True)  # 發送者 Telegram ID
+    to_user_id = Column(BigInteger, nullable=True, index=True)  # 接收者 Telegram ID
+    message_type = Column(String(32), nullable=True)  # text, photo, video, document, etc.
+    content = Column(Text, nullable=True)
+    media_url = Column(String(512), nullable=True)
+    keyboard = Column(JSON, nullable=True)  # 鍵盤按鈕 JSON
+    status = Column(String(32), default="sent")  # sent, failed, pending
+    sent_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    
+    __table_args__ = (
+        Index("ix_tg_msgs_chat_id", "chat_id"),
+        Index("ix_tg_msgs_to_user", "to_user_id"),
+        Index("ix_tg_msgs_created", "created_at"),
+    )
+
+
+class MessageTemplate(Base):
+    """消息模板表"""
+    __tablename__ = "message_templates"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(128), nullable=False)
+    category = Column(String(64), nullable=True)  # notification, marketing, system, etc.
+    content = Column(Text, nullable=False)  # 模板內容，支持變量
+    variables = Column(JSON, nullable=True)  # 可用變量列表
+    message_type = Column(String(32), default="text")  # text, photo, video, etc.
+    is_active = Column(Boolean, default=True)
+    usage_count = Column(Integer, default=0)
+    created_by = Column(Integer, ForeignKey("admin_users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AutomationTask(Base):
+    """自動化任務表"""
+    __tablename__ = "automation_tasks"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(128), nullable=False)
+    task_type = Column(String(32), nullable=False)  # scheduled, triggered
+    trigger_config = Column(JSON, nullable=True)  # 觸發配置（Cron 表達式、事件等）
+    action_config = Column(JSON, nullable=True)  # 執行動作配置
+    is_enabled = Column(Boolean, default=True)
+    last_run_at = Column(DateTime, nullable=True)
+    next_run_at = Column(DateTime, nullable=True)
+    run_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        Index("ix_automation_tasks_enabled", "is_enabled"),
+        Index("ix_automation_tasks_next_run", "next_run_at"),
+    )
+
+
+class Report(Base):
+    """報表表"""
+    __tablename__ = "reports"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    report_type = Column(String(64), nullable=False)  # user, transaction, red_packet, etc.
+    name = Column(String(128), nullable=False)
+    config = Column(JSON, nullable=True)  # 報表配置
+    file_path = Column(String(512), nullable=True)
+    file_format = Column(String(16), nullable=True)  # xlsx, csv, pdf, json
+    status = Column(String(32), default="pending")  # pending, generating, completed, failed
+    generated_by = Column(Integer, ForeignKey("admin_users.id"), nullable=True)
+    generated_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    
+    __table_args__ = (
+        Index("ix_reports_status", "status"),
+        Index("ix_reports_type", "report_type"),
+    )
+

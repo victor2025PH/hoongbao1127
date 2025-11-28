@@ -112,7 +112,22 @@
         <!-- Users Table -->
         <div id="usersTab" class="card rounded-2xl overflow-hidden">
             <div class="p-6 border-b border-white/10">
-                <h2 class="text-lg font-semibold">用戶列表</h2>
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold">用戶列表</h2>
+                    <div class="flex items-center gap-3">
+                        <input type="text" id="userSearchInput" placeholder="搜索用户（ID/用户名）" 
+                               class="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 w-64"
+                               onkeypress="if(event.key==='Enter') searchUsers()">
+                        <button onclick="searchUsers()" 
+                                class="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition">
+                            搜索
+                        </button>
+                        <button onclick="fetchUsers()" 
+                                class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition">
+                            刷新
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full">
@@ -271,9 +286,13 @@
         }
 
         // Fetch users
-        async function fetchUsers() {
+        async function fetchUsers(searchTerm = null) {
             try {
-                const res = await fetch('/api/users');
+                let url = '/api/users';
+                if (searchTerm) {
+                    url += `?search=${encodeURIComponent(searchTerm)}`;
+                }
+                const res = await fetch(url);
                 const data = await res.json();
                 const tbody = document.getElementById('usersTableBody');
                 if (data.success && data.data.users.length > 0) {
@@ -282,15 +301,21 @@
                             <td class="px-6 py-4 text-sm">${u.id}</td>
                             <td class="px-6 py-4 text-sm">${u.telegram_id}</td>
                             <td class="px-6 py-4 text-sm">${u.username || '-'}</td>
-                            <td class="px-6 py-4 text-sm text-green-400">$${u.balance.toFixed(2)}</td>
+                            <td class="px-6 py-4 text-sm text-green-400">$${(u.balance_usdt || u.balance || 0).toFixed(2)}</td>
                             <td class="px-6 py-4 text-sm">${u.energy}</td>
                             <td class="px-6 py-4 text-sm">${u.level}</td>
                             <td class="px-6 py-4 text-sm text-gray-400">${u.created_at ? new Date(u.created_at).toLocaleString('zh-TW') : '-'}</td>
                             <td class="px-6 py-4 text-sm">
-                                <button onclick="openAdjustModal(${u.id}, '${u.username || u.telegram_id}', ${u.balance})" 
-                                        class="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-xs transition">
-                                    充值
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="openAdjustModal(${u.id}, '${(u.username || u.telegram_id).toString().replace(/'/g, "\\'")}', ${u.balance_usdt || u.balance || 0})" 
+                                            class="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-xs transition">
+                                        充值
+                                    </button>
+                                    <button onclick="viewUserDetail(${u.id})" 
+                                            class="px-3 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-xs transition">
+                                        詳情
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `).join('');
@@ -442,6 +467,48 @@
                 closeAdjustModal();
             }
         });
+
+        // 搜索用户
+        function searchUsers() {
+            const searchTerm = document.getElementById('userSearchInput').value.trim();
+            if (searchTerm) {
+                fetchUsers(searchTerm);
+            } else {
+                fetchUsers();
+            }
+        }
+
+        // 查看用户详情
+        async function viewUserDetail(userId) {
+            try {
+                const res = await fetch(`/api/user/${userId}`);
+                const data = await res.json();
+                if (data.success) {
+                    const u = data.data;
+                    const detailText = `
+用戶詳情：
+ID: ${u.id}
+Telegram ID: ${u.telegram_id}
+用戶名: ${u.username || '-'}
+姓名: ${u.first_name || ''} ${u.last_name || ''}
+餘額 USDT: ${u.balance_usdt}
+餘額 TON: ${u.balance_ton}
+Stars: ${u.balance_stars}
+Points: ${u.balance_points}
+等級: ${u.level}
+經驗: ${u.xp}
+狀態: ${u.is_banned ? '已封禁' : '正常'} ${u.is_admin ? '| 管理員' : ''}
+註冊時間: ${u.created_at ? new Date(u.created_at).toLocaleString('zh-TW') : '-'}
+                    `;
+                    alert(detailText);
+                } else {
+                    alert('獲取用戶詳情失敗：' + data.error);
+                }
+            } catch (e) {
+                console.error('Failed to fetch user detail:', e);
+                alert('獲取用戶詳情失敗');
+            }
+        }
 
         // Initial load
         fetchStats();
