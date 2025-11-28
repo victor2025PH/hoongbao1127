@@ -9,7 +9,7 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from shared.database.connection import get_async_db
+from shared.database.connection import get_db_session
 from shared.database.models import Transaction, User, CurrencyType
 from sqlalchemy.orm import joinedload
 from api.utils.auth import get_current_admin
@@ -63,7 +63,7 @@ async def list_transactions(
     end_date: Optional[datetime] = Query(None),
     min_amount: Optional[Decimal] = Query(None),
     max_amount: Optional[Decimal] = Query(None),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     current_admin: dict = Depends(get_current_admin),
 ):
     """获取交易列表"""
@@ -155,7 +155,7 @@ async def list_transactions(
 @router.get("/{transaction_id}", response_model=TransactionDetail)
 async def get_transaction_detail(
     transaction_id: int,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     current_admin: dict = Depends(get_current_admin),
 ):
     """获取交易详情"""
@@ -192,7 +192,7 @@ async def get_transaction_stats(
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
     currency: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     current_admin: dict = Depends(get_current_admin),
 ):
     """获取交易统计概览"""
@@ -256,7 +256,7 @@ async def get_transaction_stats(
 async def get_transaction_trend(
     days: int = Query(30, ge=1, le=365),
     currency: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     current_admin: dict = Depends(get_current_admin),
 ):
     """获取交易趋势数据"""

@@ -9,7 +9,7 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from shared.database.connection import get_async_db
+from shared.database.connection import get_db_session
 from shared.database.models import RedPacket, RedPacketClaim, User, RedPacketStatus, RedPacketType, CurrencyType
 from api.utils.auth import get_current_admin
 from pydantic import BaseModel
@@ -87,7 +87,7 @@ async def list_redpackets(
     end_date: Optional[datetime] = Query(None),
     min_amount: Optional[Decimal] = Query(None),
     max_amount: Optional[Decimal] = Query(None),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     current_admin: dict = Depends(get_current_admin),
 ):
     """获取红包列表"""
@@ -192,7 +192,7 @@ async def list_redpackets(
 @router.get("/{redpacket_id}", response_model=RedPacketDetail)
 async def get_redpacket_detail(
     redpacket_id: int,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     current_admin: dict = Depends(get_current_admin),
 ):
     """获取红包详情"""
@@ -249,7 +249,7 @@ async def get_redpacket_detail(
 @router.post("/{redpacket_id}/refund")
 async def refund_redpacket(
     redpacket_id: int,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     current_admin: dict = Depends(get_current_admin),
 ):
     """手动退款红包"""
@@ -282,7 +282,7 @@ async def refund_redpacket(
 async def extend_redpacket(
     redpacket_id: int,
     hours: int = Query(24, ge=1, le=720),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     current_admin: dict = Depends(get_current_admin),
 ):
     """延长红包过期时间"""
@@ -310,7 +310,7 @@ async def extend_redpacket(
 @router.post("/{redpacket_id}/complete")
 async def complete_redpacket(
     redpacket_id: int,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     current_admin: dict = Depends(get_current_admin),
 ):
     """强制完成红包"""
@@ -339,7 +339,7 @@ async def complete_redpacket(
 @router.delete("/{redpacket_id}")
 async def delete_redpacket(
     redpacket_id: int,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     current_admin: dict = Depends(get_current_admin),
 ):
     """删除红包（软删除，实际应该标记删除）"""
@@ -362,7 +362,7 @@ async def delete_redpacket(
 async def get_redpacket_stats(
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     current_admin: dict = Depends(get_current_admin),
 ):
     """获取红包统计概览"""
@@ -406,7 +406,7 @@ async def get_redpacket_stats(
 @router.get("/stats/trend")
 async def get_redpacket_trend(
     days: int = Query(30, ge=1, le=365),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     current_admin: dict = Depends(get_current_admin),
 ):
     """获取红包趋势数据"""

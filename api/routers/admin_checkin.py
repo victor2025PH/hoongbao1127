@@ -9,7 +9,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from shared.database.connection import get_async_db
+from shared.database.connection import get_db_session
 from shared.database.models import CheckinRecord, User
 from api.utils.auth import get_current_active_admin, AdminUser
 from pydantic import BaseModel
@@ -48,7 +48,7 @@ async def list_checkins(
     user_id: Optional[int] = Query(None),
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     admin: AdminUser = Depends(get_current_active_admin),
 ):
     """获取签到列表"""
@@ -116,7 +116,7 @@ async def list_checkins(
 async def get_checkin_stats(
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     admin: AdminUser = Depends(get_current_active_admin),
 ):
     """获取签到统计"""
@@ -171,7 +171,7 @@ async def get_checkin_stats(
 @router.get("/trend")
 async def get_checkin_trend(
     days: int = Query(30, ge=1, le=365),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     admin: AdminUser = Depends(get_current_active_admin),
 ):
     """获取签到趋势数据"""

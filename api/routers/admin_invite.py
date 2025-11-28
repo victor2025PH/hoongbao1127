@@ -8,7 +8,7 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from shared.database.connection import get_async_db
+from shared.database.connection import get_db_session
 from shared.database.models import User, Transaction
 from api.utils.auth import get_current_active_admin, AdminUser
 from pydantic import BaseModel
@@ -53,7 +53,7 @@ async def list_invite_relations(
     inviter_id: Optional[int] = Query(None),
     invitee_id: Optional[int] = Query(None),
     min_invites: Optional[int] = Query(None),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     admin: AdminUser = Depends(get_current_active_admin),
 ):
     """获取邀请关系列表"""
@@ -132,7 +132,7 @@ async def list_invite_relations(
 async def get_invite_tree(
     user_id: int,
     depth: int = Query(3, ge=1, le=5),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     admin: AdminUser = Depends(get_current_active_admin),
 ):
     """获取邀请关系树"""
@@ -192,7 +192,7 @@ async def get_invite_tree(
 async def get_invite_stats(
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     admin: AdminUser = Depends(get_current_active_admin),
 ):
     """获取邀请统计"""
@@ -236,7 +236,7 @@ async def get_invite_stats(
 @router.get("/trend")
 async def get_invite_trend(
     days: int = Query(30, ge=1, le=365),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db_session),
     admin: AdminUser = Depends(get_current_active_admin),
 ):
     """获取邀请趋势数据"""
