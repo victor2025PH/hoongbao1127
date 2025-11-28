@@ -164,8 +164,36 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # 如果未領取，現在顯示"處理中"並繼續處理
     await query.answer("處理中...", cache_time=0)
     
+    # 保存 packet 和 db_user 的 ID，以便在第二個會話中使用
+    packet_id = packet.id
+    user_id = db_user.id
+    
     # 重新打開數據庫會話進行實際的搶包操作
     with get_db() as db:
+        # 重新查詢 packet 和 db_user（避免 DetachedInstanceError）
+        packet = db.query(RedPacket).filter(RedPacket.id == packet_id).first()
+        db_user = db.query(User).filter(User.id == user_id).first()
+        
+        if not packet or not db_user:
+            await query.answer("數據錯誤，請重試", show_alert=True)
+            return
+        
+        # 再次檢查是否已領取（防止並發搶包）
+        existing = db.query(RedPacketClaim).filter(
+            RedPacketClaim.red_packet_id == packet.id,
+            RedPacketClaim.user_id == db_user.id
+        ).first()
+        
+        if existing:
+            currency_symbol_map = {
+                CurrencyType.USDT: "USDT",
+                CurrencyType.TON: "TON",
+                CurrencyType.STARS: "Stars",
+                CurrencyType.POINTS: "Points",
+            }
+            currency_symbol = currency_symbol_map.get(packet.currency, "USDT")
+            await query.answer(f"你已經領過了！獲得 {float(existing.amount):.4f} {currency_symbol}", show_alert=True)
+            return
         
         # 計算金額
         remaining_amount = packet.total_amount - packet.claimed_amount
