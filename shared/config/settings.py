@@ -4,7 +4,7 @@ Lucky Red (搶紅包) - 全局配置
 import os
 from pathlib import Path
 from typing import List
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 # 項目根目錄
@@ -13,9 +13,32 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # .env 文件路徑
 ENV_FILE = BASE_DIR / ".env"
 
+# 確保 .env 文件被加載（在類定義之前）
+# 使用 dotenv 手動加載，確保環境變量被設置
+_loaded_env = False
+if ENV_FILE.exists():
+    try:
+        from dotenv import load_dotenv
+        # 加載 .env 文件到環境變量
+        load_dotenv(dotenv_path=ENV_FILE, override=True)
+        _loaded_env = True
+    except ImportError:
+        # 如果 dotenv 未安裝，嘗試使用 pydantic-settings 的內置支持
+        pass
+
 
 class Settings(BaseSettings):
     """應用配置"""
+    
+    model_config = SettingsConfigDict(
+        # 使用絕對路徑，如果文件存在
+        env_file=str(ENV_FILE) if ENV_FILE.exists() else ".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
+        # 允許從環境變量讀取
+        env_ignore_empty=False  # 改為 False，確保空值也被讀取
+    )
     
     # 項目信息
     APP_NAME: str = "Lucky Red"
@@ -24,6 +47,8 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # Telegram Bot
+    # pydantic-settings 會自動從環境變量讀取（通過 model_config.env_file）
+    # 如果環境變量不存在，使用空字符串作為默認值
     BOT_TOKEN: str = ""
     BOT_USERNAME: str = ""
     
@@ -60,12 +85,6 @@ class Settings(BaseSettings):
     
     # 日誌
     LOG_LEVEL: str = "INFO"
-    
-    class Config:
-        env_file = str(ENV_FILE)
-        env_file_encoding = "utf-8"
-        case_sensitive = True
-        extra = "ignore"  # 忽略額外的環境變量
 
 
 @lru_cache()

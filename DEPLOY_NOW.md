@@ -46,5 +46,5 @@ sudo journalctl -u luckyred-bot -f
 ---
 
 ## Bot Token
-已配置: `8271541107:AAEUnufB15__RoGqcaslqTAGs36y9gogPvw`
+已配置: `8271541107:AAH1YPO82cRzcwcdY9GEloejvNmpKiAxTrs`
 

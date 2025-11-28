@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, X, Users, Wallet, Gift, DollarSign, MessageSquare, Info, Bomb, Search, User } from 'lucide-react'
+import { ChevronDown, X, Users, Wallet, Gift, DollarSign, MessageSquare, Info, Bomb, Search, User, CheckCircle, XCircle, Bot } from 'lucide-react'
 import { useTranslation } from '../providers/I18nProvider'
 import { getUserChats, sendRedPacket, searchChats, searchUsers, checkUserInChat, type ChatInfo } from '../utils/api'
-import { haptic, showAlert } from '../utils/telegram'
+import { haptic, showAlert, showConfirm, getTelegramUser } from '../utils/telegram'
 
 export default function SendRedPacket() {
   const navigate = useNavigate()
@@ -15,6 +15,27 @@ export default function SendRedPacket() {
   const [showChatModal, setShowChatModal] = useState(false)
   const [showRulesModal, setShowRulesModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  
+  // 獲取 Telegram 用戶 ID（用於搜索）
+  // 優先從 Telegram WebApp 獲取，如果沒有則使用本地存儲的測試 ID
+  const telegramUser = getTelegramUser()
+  const storedTestTgId = typeof window !== 'undefined' ? localStorage.getItem('test_tg_id') : null
+  const tgId = telegramUser?.id || (storedTestTgId ? parseInt(storedTestTgId, 10) : undefined)
+  
+  // 如果是本地測試環境且沒有用戶 ID，自動設置測試 ID
+  useEffect(() => {
+    if (!telegramUser && !storedTestTgId && typeof window !== 'undefined') {
+      // 檢查 URL 參數中是否有測試 ID
+      const urlParams = new URLSearchParams(window.location.search)
+      const testTgId = urlParams.get('tg_id')
+      if (testTgId) {
+        localStorage.setItem('test_tg_id', testTgId)
+      } else {
+        // 設置默認測試 ID（用於本地開發）
+        localStorage.setItem('test_tg_id', '6359371231')
+      }
+    }
+  }, [telegramUser, storedTestTgId])
   const [amount, setAmount] = useState('')
   const [quantity, setQuantity] = useState('1')
   const [currency, setCurrency] = useState('USDT')
@@ -30,49 +51,151 @@ export default function SendRedPacket() {
 
   // 統一搜索：同時搜索群組和用戶
   const { data: searchChatsResult, isLoading: isSearchingChats } = useQuery({
-    queryKey: ['searchChats', searchQuery],
-    queryFn: () => searchChats(searchQuery),
+    queryKey: ['searchChats', searchQuery, tgId],
+    queryFn: () => searchChats(searchQuery, tgId || undefined),
     enabled: searchQuery.length > 0,
   })
 
   const { data: searchUsersResult, isLoading: isSearchingUsers } = useQuery({
-    queryKey: ['searchUsers', searchQuery],
-    queryFn: () => searchUsers(searchQuery),
+    queryKey: ['searchUsers', searchQuery, tgId],
+    queryFn: () => searchUsers(searchQuery, tgId || undefined),
     enabled: searchQuery.length > 0,
   })
+
+  // 合併所有搜索結果（群組和用戶），統一顯示
+  const allSearchResults = useMemo(() => {
+    const results: Array<ChatInfo & { isUser?: boolean }> = []
+    
+    // 添加群組結果
+    if (searchChatsResult) {
+      searchChatsResult.forEach(chat => {
+        results.push({ ...chat, isUser: false })
+      })
+    }
+    
+    // 添加用戶結果
+    if (searchUsersResult) {
+      searchUsersResult.forEach(user => {
+        results.push({ ...user, isUser: true })
+      })
+    }
+    
+    return results
+  }, [searchChatsResult, searchUsersResult])
 
   // 當選擇群組時，驗證用戶是否在群組中
   const handleSelectChat = async (chat: ChatInfo) => {
     try {
-      // 如果是基於鏈接的群組（負數 ID），傳遞鏈接給後端
-      const checkResult = await checkUserInChat(chat.id, chat.link)
-      if (!checkResult.in_group) {
-        // 如果用戶不在群組中，提供加入群組的選項
-        const groupLink = chat.link
-        if (groupLink) {
-          const telegram = window.Telegram?.WebApp
-          if (telegram) {
-            const shouldJoin = await new Promise<boolean>((resolve) => {
-              telegram.showConfirm(
-                t('join_group_first') + '\n\n' + t('open_group_link'),
-                (confirmed) => resolve(confirmed)
-              )
-            })
-            if (shouldJoin) {
-              telegram.openLink(groupLink)
+      haptic('light')
+      
+      // 如果是群組，檢查狀態
+      if (chat.type !== 'private') {
+        // 如果搜索結果已經包含完整的狀態信息，直接處理選擇邏輯
+        if (chat.user_in_group !== undefined && chat.bot_in_group !== undefined) {
+          // 如果 Bot 不在群組中，提示用戶（但不阻止選擇，可以通過鏈接發送）
+          if (chat.bot_in_group === false) {
+            const telegram = window.Telegram?.WebApp
+            if (telegram) {
+              await new Promise<void>((resolve) => {
+                telegram.showAlert(
+                  '⚠️ 機器人不在群組中\n\n您仍然可以選擇此群組，發送紅包時會生成分享鏈接，您可以手動分享到群組中。',
+                  () => resolve()
+                )
+              })
+            } else {
+              showAlert('⚠️ 機器人不在群組中，發送紅包時會生成分享鏈接')
+            }
+            // 不 return，繼續選擇流程
+          }
+          
+          // 如果用戶不在群組中，提示加入
+          if (chat.user_in_group === false) {
+            const groupLink = chat.link
+            if (groupLink) {
+              const telegram = window.Telegram?.WebApp
+              if (telegram) {
+                const shouldJoin = await new Promise<boolean>((resolve) => {
+                  telegram.showConfirm(
+                    '⚠️ 您尚未加入此群組\n\n是否現在加入？',
+                    (confirmed) => resolve(confirmed)
+                  )
+                })
+                if (shouldJoin) {
+                  telegram.openLink(groupLink)
+                  return // 用戶選擇加入群組，取消選擇
+                } else {
+                  // 用戶選擇不加入，仍然允許選擇（可能想先選擇，稍後加入）
+                  // 繼續選擇流程
+                }
+              } else {
+                const shouldContinue = await showConfirm('⚠️ 您尚未加入此群組\n\n是否仍然選擇此群組？')
+                if (!shouldContinue) {
+                  return
+                }
+              }
+            } else {
+              const shouldContinue = await showConfirm('⚠️ 您尚未加入此群組\n\n是否仍然選擇此群組？')
+              if (!shouldContinue) {
+                return
+              }
+            }
+          }
+          
+          // 如果搜索結果已經顯示了狀態，直接選擇（不需要再次調用 API）
+          setSelectedChat(chat)
+          setShowChatModal(false)
+          setSearchQuery('')
+          haptic('success')
+          showAlert('✅ 已選擇 ' + chat.title)
+          return
+        }
+      }
+      
+      // 如果狀態信息不完整，進行額外驗證
+      // 驗證用戶是否在群組中（再次確認）
+      try {
+        const checkResult = await checkUserInChat(chat.id, chat.link, tgId)
+        if (!checkResult.in_group && chat.type !== 'private') {
+          const groupLink = chat.link
+          if (groupLink) {
+            const telegram = window.Telegram?.WebApp
+            if (telegram) {
+              const shouldJoin = await new Promise<boolean>((resolve) => {
+                telegram.showConfirm(
+                  t('join_group_first') + '\n\n' + t('open_group_link'),
+                  (confirmed) => resolve(confirmed)
+                )
+              })
+              if (shouldJoin) {
+                telegram.openLink(groupLink)
+              }
+            } else {
+              showAlert(t('join_group_first'))
             }
           } else {
-            showAlert(t('join_group_first'))
+            showAlert(checkResult.message || t('user_not_in_group'))
           }
-        } else {
-          showAlert(checkResult.message || t('user_not_in_group'))
+          return
         }
-        return
+      } catch (checkError: any) {
+        // 如果檢查失敗，但搜索結果顯示用戶在群組中，仍然允許選擇
+        if (chat.user_in_group === true) {
+          console.warn('檢查用戶狀態失敗，但搜索結果顯示用戶在群組中，繼續選擇:', checkError)
+        } else {
+          // 如果沒有狀態信息，允許選擇（可能是基於鏈接的群組）
+          console.warn('檢查用戶狀態失敗，繼續選擇:', checkError)
+        }
       }
+      
+      // 選擇成功
       setSelectedChat(chat)
       setShowChatModal(false)
       setSearchQuery('')
+      haptic('success')
+      showAlert('✅ 已選擇 ' + chat.title)
     } catch (error: any) {
+      haptic('error')
+      console.error('選擇群組失敗:', error)
       if (error.message?.includes('not in group') || error.message?.includes('不在群組')) {
         const groupLink = chat.link
         if (groupLink) {
@@ -93,7 +216,7 @@ export default function SendRedPacket() {
           showAlert(t('join_group_first'))
         }
       } else {
-        showAlert(error.message || t('user_not_in_group'))
+        showAlert(error.message || '選擇失敗，請重試')
       }
     }
   }
@@ -385,54 +508,76 @@ export default function SendRedPacket() {
                     <div className="p-8 text-center text-gray-400">{t('loading')}</div>
                   )}
 
-                  {/* 群組搜索結果 */}
-                  {!isSearchingChats && searchChatsResult && searchChatsResult.length > 0 && (
+                  {/* 合併顯示所有搜索結果（群組和用戶） */}
+                  {!isSearchingChats && !isSearchingUsers && allSearchResults.length > 0 && (
                     <>
-                      <div className="px-4 py-2 text-xs text-gray-500 font-medium">{t('search_group')}</div>
-                      {searchChatsResult.map((chat: ChatInfo) => (
-                        <button
-                          key={`chat-${chat.id}`}
-                          onClick={() => handleSelectChat(chat)}
-                          className="w-full flex items-center gap-3 p-4 hover:bg-white/5 transition-colors"
-                        >
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
-                            {chat.title[0]}
-                          </div>
-                          <div className="flex-1 text-left">
-                            <div className="text-white font-medium">{chat.title}</div>
-                            <div className="text-xs text-gray-500">群組</div>
-                          </div>
-                        </button>
-                      ))}
-                    </>
-                  )}
-
-                  {/* 用戶搜索結果 */}
-                  {!isSearchingUsers && searchUsersResult && searchUsersResult.length > 0 && (
-                    <>
-                      <div className="px-4 py-2 text-xs text-gray-500 font-medium border-t border-white/5 mt-2 pt-2">{t('search_user')}</div>
-                      {searchUsersResult.map((user: ChatInfo) => (
-                        <button
-                          key={`user-${user.id}`}
-                          onClick={() => handleSelectChat(user)}
-                          className="w-full flex items-center gap-3 p-4 hover:bg-white/5 transition-colors"
-                        >
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-bold">
-                            {user.title[0]}
-                          </div>
-                          <div className="flex-1 text-left">
-                            <div className="text-white font-medium">{user.title}</div>
-                            <div className="text-xs text-gray-500">用戶</div>
-                          </div>
-                        </button>
-                      ))}
+                      {allSearchResults.map((item: ChatInfo & { isUser?: boolean }) => {
+                        const isUser = item.isUser || item.type === 'private'
+                        return (
+                          <button
+                            key={`${isUser ? 'user' : 'chat'}-${item.id}`}
+                            onClick={() => handleSelectChat(item)}
+                            className="w-full flex items-center gap-3 p-4 hover:bg-white/5 transition-colors border-b border-white/5"
+                          >
+                            {/* 圖標 - 根據類型顯示不同的圖標和顏色 */}
+                            {isUser ? (
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-bold shrink-0">
+                                <User size={20} />
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shrink-0">
+                                <Users size={20} />
+                              </div>
+                            )}
+                            <div className="flex-1 text-left min-w-0">
+                              <div className="text-white font-medium truncate">{item.title}</div>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {/* 類型標籤 */}
+                                <span className={`text-xs font-medium ${
+                                  isUser ? 'text-green-400' : 'text-blue-400'
+                                }`}>
+                                  {isUser ? '用戶' : '群組'}
+                                </span>
+                                {/* 群組狀態指示器（僅對群組顯示） */}
+                                {!isUser && (
+                                  <>
+                                    {item.user_in_group !== undefined && (
+                                      <span className={`text-xs flex items-center gap-1 ${
+                                        item.user_in_group ? 'text-green-400' : 'text-orange-400'
+                                      }`}>
+                                        {item.user_in_group ? (
+                                          <CheckCircle size={12} />
+                                        ) : (
+                                          <XCircle size={12} />
+                                        )}
+                                        {item.user_in_group ? '已加入' : '未加入'}
+                                      </span>
+                                    )}
+                                    {item.bot_in_group !== undefined && (
+                                      <span className={`text-xs flex items-center gap-1 ${
+                                        item.bot_in_group ? 'text-green-400' : 'text-red-400'
+                                      }`}>
+                                        <Bot size={12} />
+                                        {item.bot_in_group ? '機器人在' : '機器人不在'}
+                                      </span>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                              {item.status_message && (
+                                <div className="text-xs text-gray-500 mt-1">{item.status_message}</div>
+                              )}
+                            </div>
+                            {/* 選擇指示器 */}
+                            <ChevronDown size={18} className="text-gray-400 shrink-0" />
+                          </button>
+                        )
+                      })}
                     </>
                   )}
 
                   {/* 沒有搜索結果 */}
-                  {!isSearchingChats && !isSearchingUsers && 
-                   (!searchChatsResult || searchChatsResult.length === 0) && 
-                   (!searchUsersResult || searchUsersResult.length === 0) && (
+                  {!isSearchingChats && !isSearchingUsers && allSearchResults.length === 0 && (
                     <div className="p-8 text-center text-gray-400">{t('no_groups_found')}</div>
                   )}
                 </>

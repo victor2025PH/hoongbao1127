@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { getInitData } from './telegram'
+import { getInitData, getTelegramUser } from './telegram'
 
 // API 基礎 URL
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
@@ -113,25 +113,57 @@ export interface ChatInfo {
   title: string
   type: string
   link?: string  // 群組鏈接（用於基於鏈接的群組）
+  user_in_group?: boolean  // 用戶是否在群組中
+  bot_in_group?: boolean  // Bot 是否在群組中
+  status_message?: string  // 狀態提示信息
 }
 
 export async function getUserChats(): Promise<ChatInfo[]> {
   return api.get('/v1/chats')
 }
 
-export async function searchChats(query: string): Promise<ChatInfo[]> {
-  // 處理群鏈接格式
+export async function searchChats(query: string, tgId?: number): Promise<ChatInfo[]> {
+  // 處理群鏈接格式和 @ 開頭的格式
   let processedQuery = query.trim()
-  if (query.includes('t.me/')) {
-    const match = query.match(/t\.me\/([^/?]+)/)
+  
+  // 處理 @ 開頭的格式（移除 @ 符號）
+  if (processedQuery.startsWith('@')) {
+    processedQuery = processedQuery.substring(1)
+  }
+  
+  // 處理 t.me/ 鏈接格式
+  if (processedQuery.includes('t.me/')) {
+    const match = processedQuery.match(/t\.me\/([^/?]+)/)
     if (match) {
       processedQuery = match[1]
     }
   }
-  return api.get(`/v1/chats/search?q=${encodeURIComponent(processedQuery)}`)
+  
+  // 如果處理後的查詢為空，使用原始查詢
+  if (!processedQuery) {
+    processedQuery = query.trim()
+  }
+  
+  // 獲取用戶 ID（優先使用傳入的參數，否則從 Telegram WebApp 獲取）
+  const userId = tgId || getTelegramUser()?.id
+  
+  // 構建查詢參數 - 使用完整鏈接格式以便後端正確識別
+  let finalQuery = processedQuery
+  // 如果查詢看起來像 username（不包含空格和特殊字符），嘗試構建完整鏈接
+  if (!finalQuery.includes('://') && !finalQuery.includes('t.me/') && /^[a-zA-Z0-9_]+$/.test(finalQuery)) {
+    // 對於純 username，後端會自動處理，這裡保持原樣
+    finalQuery = processedQuery
+  }
+  
+  const params = new URLSearchParams({ q: finalQuery })
+  if (userId) {
+    params.append('tg_id', userId.toString())
+  }
+  
+  return api.get(`/v1/chats/search?${params.toString()}`)
 }
 
-export async function searchUsers(query: string): Promise<ChatInfo[]> {
+export async function searchUsers(query: string, tgId?: number): Promise<ChatInfo[]> {
   // 處理用戶名格式（移除 @ 符號）
   let processedQuery = query.trim().replace(/^@/, '')
   // 如果是群鏈接，也嘗試提取用戶名
@@ -141,11 +173,29 @@ export async function searchUsers(query: string): Promise<ChatInfo[]> {
       processedQuery = match[1]
     }
   }
-  return api.get(`/v1/chats/users/search?q=${encodeURIComponent(processedQuery)}`)
+  
+  // 獲取用戶 ID（優先使用傳入的參數，否則從 Telegram WebApp 獲取）
+  const userId = tgId || getTelegramUser()?.id
+  
+  // 構建查詢參數
+  const params = new URLSearchParams({ q: processedQuery })
+  if (userId) {
+    params.append('tg_id', userId.toString())
+  }
+  
+  return api.get(`/v1/chats/users/search?${params.toString()}`)
 }
 
-export async function checkUserInChat(chatId: number, link?: string): Promise<{ in_group: boolean; message?: string }> {
-  const params = link ? { link } : {}
+export async function checkUserInChat(chatId: number, link?: string, tgId?: number): Promise<{ in_group: boolean; message?: string }> {
+  const params: Record<string, string> = {}
+  if (link) {
+    params.link = link
+  }
+  // 獲取用戶 ID（優先使用傳入的參數，否則從 Telegram WebApp 獲取）
+  const userId = tgId || getTelegramUser()?.id
+  if (userId) {
+    params.tg_id = userId.toString()
+  }
   return api.get(`/v1/chats/${chatId}/check`, { params })
 }
 

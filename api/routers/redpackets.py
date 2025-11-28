@@ -10,11 +10,17 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import uuid
 import random
+from loguru import logger
 
 from shared.database.connection import get_db_session
 from shared.database.models import User, RedPacket, RedPacketClaim, CurrencyType, RedPacketType, RedPacketStatus
+from shared.config.settings import get_settings
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import TelegramError
 
+settings = get_settings()
 router = APIRouter()
+bot = Bot(token=settings.BOT_TOKEN)
 
 
 class CreateRedPacketRequest(BaseModel):
@@ -41,6 +47,8 @@ class RedPacketResponse(BaseModel):
     message: str
     status: str
     created_at: datetime
+    message_sent: bool = False  # 消息是否成功發送到群組
+    share_link: Optional[str] = None  # 分享鏈接（如果機器人不在群組中）
     
     class Config:
         from_attributes = True
@@ -97,7 +105,72 @@ async def create_red_packet(
     await db.commit()
     await db.refresh(packet)
     
-    return packet
+    # 嘗試發送消息到群組
+    message_sent = False
+    share_link = None
+    
+    if request.chat_id:
+        try:
+            # 構建紅包消息
+            currency_symbol = "USDT" if request.currency == CurrencyType.USDT else request.currency.value.upper()
+            packet_type_text = "手氣最佳" if request.packet_type == RedPacketType.RANDOM else "紅包炸彈"
+            
+            text = f"""
+🧧 *{sender.first_name or '用戶'} 發了一個紅包*
+
+💰 {float(request.total_amount):.2f} {currency_symbol} | 👥 {request.total_count} 份
+🎮 {packet_type_text}
+📝 {request.message}
+
+點擊下方按鈕搶紅包！
+"""
+            
+            keyboard = [[InlineKeyboardButton("🧧 搶紅包", callback_data=f"claim:{packet.uuid}")]]
+            
+            # 嘗試發送消息到群組
+            sent_message = await bot.send_message(
+                chat_id=request.chat_id,
+                text=text,
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            
+            # 保存消息 ID
+            packet.message_id = sent_message.message_id
+            await db.commit()
+            message_sent = True
+            logger.info(f"Red packet message sent to chat {request.chat_id}, message_id: {sent_message.message_id}")
+            
+        except TelegramError as e:
+            # 如果機器人不在群組中，生成分享鏈接
+            error_msg = str(e).lower()
+            if "chat not found" in error_msg or "not enough rights" in error_msg or "forbidden" in error_msg:
+                logger.warning(f"Bot not in group {request.chat_id} or no permission: {str(e)}")
+                # 生成分享鏈接（MiniApp 鏈接，包含紅包 UUID）
+                share_link = f"{settings.MINIAPP_URL}/packets/{packet.uuid}"
+            else:
+                logger.error(f"Failed to send red packet message: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected error sending red packet message: {str(e)}")
+    
+    # 返回響應（包含消息發送狀態）
+    response = RedPacketResponse(
+        id=packet.id,
+        uuid=packet.uuid,
+        currency=packet.currency.value,
+        packet_type=packet.packet_type.value,
+        total_amount=float(packet.total_amount),
+        total_count=packet.total_count,
+        claimed_amount=float(packet.claimed_amount),
+        claimed_count=packet.claimed_count,
+        message=packet.message,
+        status=packet.status.value,
+        created_at=packet.created_at,
+        message_sent=message_sent,
+        share_link=share_link
+    )
+    
+    return response
 
 
 @router.post("/{packet_uuid}/claim", response_model=ClaimResult)

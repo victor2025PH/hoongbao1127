@@ -44,7 +44,7 @@ fi
 echo "[4/12] 創建環境變量文件..."
 cat > $APP_DIR/.env << 'ENVEOF'
 # Telegram Bot
-BOT_TOKEN=8271541107:AAEUnufB15__RoGqcaslqTAGs36y9gogPvw
+BOT_TOKEN=8271541107:AAH1YPO82cRzcwcdY9GEloejvNmpKiAxTrs
 BOT_USERNAME=luckyred_bot
 ADMIN_IDS=5433982810
 

@@ -3,7 +3,7 @@
 set -e
 
 APP_DIR="/opt/luckyred"
-BOT_TOKEN="8271541107:AAEUnufB15__RoGqcas1qTAGs36y9gogPvw"
+BOT_TOKEN="8271541107:AAH1YPO82cRzcwcdY9GEloejvNmpKiAxTrs"
 ADMIN_ID="5433982810"
 DB_PASS="LuckyRed2025!"
 

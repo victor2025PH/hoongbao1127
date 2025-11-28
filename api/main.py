@@ -15,7 +15,7 @@ from loguru import logger
 
 from shared.config.settings import get_settings
 from shared.database.connection import init_db
-from api.routers import auth, users, redpackets, wallet, checkin
+from api.routers import auth, users, redpackets, wallet, checkin, chats
 
 settings = get_settings()
 
@@ -89,6 +89,7 @@ app.include_router(users.router, prefix="/api/users", tags=["用戶"])
 app.include_router(redpackets.router, prefix="/api/redpackets", tags=["紅包"])
 app.include_router(wallet.router, prefix="/api/wallet", tags=["錢包"])
 app.include_router(checkin.router, prefix="/api/checkin", tags=["簽到"])
+app.include_router(chats.router, prefix="/api/v1/chats", tags=["群組"])
 
 
 if __name__ == "__main__":
