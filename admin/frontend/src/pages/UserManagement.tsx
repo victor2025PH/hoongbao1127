@@ -413,25 +413,29 @@ export default function UserManagement() {
         open={sendMessageModalVisible}
         onCancel={() => {
           setSendMessageModalVisible(false)
+          form.resetFields(['message'])
         }}
-        onOk={() => {
-          const message = form.getFieldValue('message')
-          if (message) {
-            sendMessageMutation.mutate({
-              chat_id: selectedUser?.telegram_id,
-              text: message,
-            })
-          }
-        }}
+        onOk={() => form.submit()}
         confirmLoading={sendMessageMutation.isPending}
       >
-        <Form layout="vertical">
+        <Form 
+          form={form}
+          layout="vertical"
+          onFinish={(values) => {
+            if (values.message && selectedUser?.telegram_id) {
+              sendMessageMutation.mutate({
+                chat_id: selectedUser.telegram_id,
+                text: values.message,
+              })
+            }
+          }}
+        >
           <Form.Item label="接收者">
             <Input value={selectedUser?.username || selectedUser?.telegram_id} disabled />
           </Form.Item>
           <Form.Item
             name="message"
-            label="消息內容"
+            label="* 消息內容"
             rules={[{ required: true, message: '請輸入消息內容' }]}
           >
             <Input.TextArea rows={5} placeholder="輸入要發送的消息..." />
