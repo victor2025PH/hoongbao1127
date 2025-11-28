@@ -10,8 +10,9 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 
 from shared.database.connection import get_db_session, get_async_db
-from shared.database.models import User, Transaction, RedPacket, RedPacketClaim, CheckinRecord
+from shared.database.models import User, Transaction, RedPacket, RedPacketClaim, CheckinRecord, CurrencyType
 from api.utils.auth import get_current_active_admin, AdminUser, get_current_admin
+from decimal import Decimal
 
 router = APIRouter(prefix="/api/v1/admin/users", tags=["管理后台-用户管理"])
 
@@ -180,24 +181,36 @@ async def adjust_user_balance(
         raise HTTPException(status_code=400, detail=f"不支持的货币类型: {request.currency}")
     
     balance_field = currency_map[request.currency]
-    current_balance = getattr(user, balance_field) or 0
+    current_balance = getattr(user, balance_field) or Decimal(0)
+    if isinstance(current_balance, (int, float)):
+        current_balance = Decimal(str(current_balance))
     
     # 更新余额
-    new_balance = current_balance + request.amount
+    amount_decimal = Decimal(str(request.amount))
+    new_balance = current_balance + amount_decimal
     if new_balance < 0:
         raise HTTPException(status_code=400, detail="余额不能为负数")
     
     setattr(user, balance_field, new_balance)
     
+    # 转换货币类型为枚举
+    currency_enum_map = {
+        "usdt": CurrencyType.USDT,
+        "ton": CurrencyType.TON,
+        "stars": CurrencyType.STARS,
+        "points": CurrencyType.POINTS,
+    }
+    currency_enum = currency_enum_map.get(request.currency.lower(), CurrencyType.USDT)
+    
     # 创建交易记录
     transaction = Transaction(
         user_id=user.id,
         type="admin_adjust",
-        amount=request.amount,
-        currency=request.currency.upper(),
-        status="completed",
-        description=request.reason or f"管理员 {admin.username} 调整余额",
-        created_at=datetime.utcnow(),
+        amount=amount_decimal,
+        currency=currency_enum,
+        balance_before=current_balance,
+        balance_after=new_balance,
+        note=request.reason or f"管理员 {admin.username} 调整余额",
     )
     db.add(transaction)
     
