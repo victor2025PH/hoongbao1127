@@ -40,7 +40,7 @@ export default function UserManagement() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['users', searchText, filters],
-    queryFn: () => {
+    queryFn: async () => {
       const params: any = { search: searchText || undefined }
       if (filters.level !== undefined) params.level = filters.level
       if (filters.is_banned !== undefined) params.is_banned = filters.is_banned
@@ -48,7 +48,19 @@ export default function UserManagement() {
       if (filters.max_balance_usdt !== undefined) params.max_balance_usdt = filters.max_balance_usdt
       if (filters.created_from) params.created_from = filters.created_from
       if (filters.created_to) params.created_to = filters.created_to
-      return userApi.list(params).then(res => res.data)
+      const response = await userApi.list(params)
+      console.log('User list API response:', response.data)
+      // 确保返回的数据结构正确
+      if (response.data && response.data.data) {
+        // 如果响应是 { success: true, data: [...], total: ... }
+        return {
+          data: response.data.data,
+          total: response.data.total || response.data.data.length,
+          page: response.data.page || 1,
+          limit: response.data.limit || 10
+        }
+      }
+      return response.data
     },
   })
 
@@ -329,7 +341,7 @@ export default function UserManagement() {
 
       <Table
         columns={columns}
-        dataSource={data?.data?.users || []}
+        dataSource={data?.data || []}
         loading={isLoading}
         rowKey="id"
         rowSelection={rowSelection}
