@@ -289,6 +289,7 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sender_name = sender.first_name if sender else "Unknown"
         
         # 在數據庫會話內讀取所有需要的屬性值
+        packet_id = packet.id  # 保存 packet.id，避免 DetachedInstanceError
         total_amount = float(packet.total_amount)
         claimed_count = packet.claimed_count
         total_count = packet.total_count
@@ -296,6 +297,8 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         packet_status = packet.status
         packet_uuid = packet.uuid
         packet_currency = packet.currency
+        packet_bomb_number = packet.bomb_number
+        packet_type = packet.packet_type
         
         # 獲取貨幣符號
         currency_symbol_map = {
@@ -307,26 +310,35 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         currency_symbol = currency_symbol_map.get(packet_currency, "USDT")
         
         # 檢查是否踩雷（從 claim 記錄中讀取）
-        is_bomb = claim.is_bomb if hasattr(claim, 'is_bomb') else False
-        penalty_amount = claim.penalty_amount if hasattr(claim, 'penalty_amount') and claim.penalty_amount else None
-        packet_bomb_number = packet.bomb_number
-        packet_type = packet.packet_type
+        is_bomb_value = claim.is_bomb if hasattr(claim, 'is_bomb') else False
+        penalty_amount_value = claim.penalty_amount if hasattr(claim, 'penalty_amount') and claim.penalty_amount else None
+        
+        # 獲取所有已搶紅包的記錄（在同一個會話中查詢，避免 DetachedInstanceError）
+        all_claims = db.query(RedPacketClaim).filter(
+            RedPacketClaim.red_packet_id == packet_id
+        ).order_by(RedPacketClaim.claimed_at.asc()).all()
+        
+        # 獲取所有搶包用戶的信息
+        claimers_info = []
+        for claim_record in all_claims:
+            claimer_user = db.query(User).filter(User.id == claim_record.user_id).first()
+            if claimer_user:
+                claimers_info.append({
+                    'name': claimer_user.first_name or '用戶',
+                    'amount': float(claim_record.amount),
+                    'is_bomb': claim_record.is_bomb if hasattr(claim_record, 'is_bomb') else False,
+                    'penalty': float(claim_record.penalty_amount) if hasattr(claim_record, 'penalty_amount') and claim_record.penalty_amount else None,
+                })
     
     # 根據是否踩雷顯示不同的提示
-    if is_bomb and penalty_amount:
+    if is_bomb_value and penalty_amount_value:
         thunder_type = "單雷" if total_count == 10 else "雙雷"
         await query.answer(
-            f"💣 踩雷了！需要賠付 {float(penalty_amount):.2f} {currency_symbol}（{thunder_type}）",
+            f"💣 踩雷了！需要賠付 {float(penalty_amount_value):.2f} {currency_symbol}（{thunder_type}）",
             show_alert=True
         )
     else:
         await query.answer(f"🎉 恭喜獲得 {float(claim_amount):.4f} {currency_symbol}！", show_alert=True)
-    
-    # 獲取所有已搶紅包的記錄（在數據庫會話外查詢）
-    with get_db() as db:
-        all_claims = db.query(RedPacketClaim).filter(
-            RedPacketClaim.red_packet_id == packet.id
-        ).order_by(RedPacketClaim.claimed_at.asc()).all()
         
         # 獲取所有搶包用戶的信息
         claimers_info = []
