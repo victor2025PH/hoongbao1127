@@ -50,16 +50,36 @@ export default function SendRedPacket() {
   })
 
   // 統一搜索：同時搜索群組和用戶
-  const { data: searchChatsResult, isLoading: isSearchingChats } = useQuery({
+  const { data: searchChatsResult, isLoading: isSearchingChats, error: searchChatsError } = useQuery({
     queryKey: ['searchChats', searchQuery, tgId],
-    queryFn: () => searchChats(searchQuery, tgId || undefined),
+    queryFn: () => {
+      console.log('[Search] Searching chats:', searchQuery, 'tgId:', tgId)
+      return searchChats(searchQuery, tgId || undefined)
+    },
     enabled: searchQuery.length > 0,
+    retry: 1,
+    onError: (error) => {
+      console.error('[Search] Error searching chats:', error)
+    },
+    onSuccess: (data) => {
+      console.log('[Search] Chats result:', data)
+    }
   })
 
-  const { data: searchUsersResult, isLoading: isSearchingUsers } = useQuery({
+  const { data: searchUsersResult, isLoading: isSearchingUsers, error: searchUsersError } = useQuery({
     queryKey: ['searchUsers', searchQuery, tgId],
-    queryFn: () => searchUsers(searchQuery, tgId || undefined),
+    queryFn: () => {
+      console.log('[Search] Searching users:', searchQuery, 'tgId:', tgId)
+      return searchUsers(searchQuery, tgId || undefined)
+    },
     enabled: searchQuery.length > 0,
+    retry: 1,
+    onError: (error) => {
+      console.error('[Search] Error searching users:', error)
+    },
+    onSuccess: (data) => {
+      console.log('[Search] Users result:', data)
+    }
   })
 
   // 合併所有搜索結果（群組和用戶），統一顯示
@@ -508,8 +528,20 @@ export default function SendRedPacket() {
                     <div className="p-8 text-center text-gray-400">{t('loading')}</div>
                   )}
 
+                  {/* 錯誤提示 */}
+                  {(searchChatsError || searchUsersError) && (
+                    <div className="p-4 m-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <div className="text-red-400 text-sm">
+                        {searchChatsError?.message || searchUsersError?.message || '搜索失敗'}
+                      </div>
+                      <div className="text-gray-500 text-xs mt-1">
+                        請檢查網絡連接或稍後再試
+                      </div>
+                    </div>
+                  )}
+
                   {/* 合併顯示所有搜索結果（群組和用戶） */}
-                  {!isSearchingChats && !isSearchingUsers && allSearchResults.length > 0 && (
+                  {!isSearchingChats && !isSearchingUsers && !searchChatsError && !searchUsersError && allSearchResults.length > 0 && (
                     <>
                       {allSearchResults.map((item: ChatInfo & { isUser?: boolean }) => {
                         const isUser = item.isUser || item.type === 'private'
@@ -577,8 +609,13 @@ export default function SendRedPacket() {
                   )}
 
                   {/* 沒有搜索結果 */}
-                  {!isSearchingChats && !isSearchingUsers && allSearchResults.length === 0 && (
-                    <div className="p-8 text-center text-gray-400">{t('no_groups_found')}</div>
+                  {!isSearchingChats && !isSearchingUsers && !searchChatsError && !searchUsersError && allSearchResults.length === 0 && (
+                    <div className="p-8 text-center text-gray-400">
+                      <div>{t('no_groups_found')}</div>
+                      <div className="text-xs text-gray-500 mt-2">
+                        請嘗試使用群組鏈接或 @username 格式
+                      </div>
+                    </div>
                   )}
                 </>
               ) : (

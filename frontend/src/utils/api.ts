@@ -24,10 +24,20 @@ api.interceptors.request.use((config) => {
 
 // 響應攔截器 - 統一錯誤處理
 api.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    // 記錄成功的響應（僅在開發環境）
+    if (import.meta.env.DEV) {
+      console.log('[API Success]', response.config.url, response.data)
+    }
+    return response.data
+  },
   (error) => {
     const message = error.response?.data?.detail || error.message || '請求失敗'
-    console.error('[API Error]', message)
+    console.error('[API Error]', error.config?.url, message, error.response?.data)
+    // 對於搜索 API，如果返回空數組，不應該視為錯誤
+    if (error.config?.url?.includes('/search') && error.response?.status === 200) {
+      return []
+    }
     return Promise.reject(new Error(message))
   }
 )
@@ -160,7 +170,19 @@ export async function searchChats(query: string, tgId?: number): Promise<ChatInf
     params.append('tg_id', userId.toString())
   }
   
-  return api.get(`/v1/chats/search?${params.toString()}`)
+  try {
+    const result = await api.get(`/v1/chats/search?${params.toString()}`)
+    console.log('[searchChats] API response:', result)
+    // 確保返回的是數組
+    return Array.isArray(result) ? result : []
+  } catch (error: any) {
+    console.error('[searchChats] API error:', error)
+    // 如果錯誤是空結果，返回空數組而不是拋出錯誤
+    if (error.message?.includes('not found') || error.response?.status === 404) {
+      return []
+    }
+    throw error
+  }
 }
 
 export async function searchUsers(query: string, tgId?: number): Promise<ChatInfo[]> {
@@ -183,7 +205,19 @@ export async function searchUsers(query: string, tgId?: number): Promise<ChatInf
     params.append('tg_id', userId.toString())
   }
   
-  return api.get(`/v1/chats/users/search?${params.toString()}`)
+  try {
+    const result = await api.get(`/v1/chats/users/search?${params.toString()}`)
+    console.log('[searchUsers] API response:', result)
+    // 確保返回的是數組
+    return Array.isArray(result) ? result : []
+  } catch (error: any) {
+    console.error('[searchUsers] API error:', error)
+    // 如果錯誤是空結果，返回空數組而不是拋出錯誤
+    if (error.message?.includes('not found') || error.response?.status === 404) {
+      return []
+    }
+    throw error
+  }
 }
 
 export async function checkUserInChat(chatId: number, link?: string, tgId?: number): Promise<{ in_group: boolean; message?: string }> {
