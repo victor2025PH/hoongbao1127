@@ -114,6 +114,9 @@ class RedPacket(Base):
     # 祝福語
     message = Column(String(256), default="恭喜發財！🧧")
     
+    # 紅包炸彈相關（僅當 packet_type = EQUAL 時使用）
+    bomb_number = Column(Integer, nullable=True)  # 炸彈數字（0-9），用於紅包炸彈遊戲
+    
     # 狀態
     status = Column(Enum(RedPacketStatus), default=RedPacketStatus.ACTIVE)
     expires_at = Column(DateTime, nullable=True)
@@ -146,6 +149,10 @@ class RedPacketClaim(Base):
     # 領取金額
     amount = Column(Numeric(20, 8), nullable=False)
     is_luckiest = Column(Boolean, default=False)  # 手氣最佳
+    
+    # 紅包炸彈相關
+    is_bomb = Column(Boolean, default=False)  # 是否踩雷
+    penalty_amount = Column(Numeric(20, 8), nullable=True)  # 賠付金額（如果踩雷）
     
     # 時間戳
     claimed_at = Column(DateTime, default=datetime.utcnow)

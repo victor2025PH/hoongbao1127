@@ -173,20 +173,78 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("紅包已被搶完", show_alert=True)
             return
         
-        if remaining_count == 1:
-            claim_amount = remaining_amount
-        else:
-            max_amount = remaining_amount * Decimal("0.9") / remaining_count * 2
-            claim_amount = Decimal(str(random.uniform(0.0001, float(max_amount))))
-            claim_amount = min(claim_amount, remaining_amount - Decimal("0.0001") * (remaining_count - 1))
+        # 根據紅包類型計算金額
+        if packet.packet_type == RedPacketType.EQUAL:  # 紅包炸彈（固定金額分配）
+            # 固定金額：平分剩餘金額
+            claim_amount = remaining_amount / Decimal(str(remaining_count))
+            claim_amount = round(claim_amount, 8)
+        else:  # 手氣最佳（隨機金額）
+            if remaining_count == 1:
+                claim_amount = remaining_amount
+            else:
+                max_amount = remaining_amount * Decimal("0.9") / remaining_count * 2
+                claim_amount = Decimal(str(random.uniform(0.0001, float(max_amount))))
+                claim_amount = min(claim_amount, remaining_amount - Decimal("0.0001") * (remaining_count - 1))
+            claim_amount = round(claim_amount, 8)
         
-        claim_amount = round(claim_amount, 8)
+        # 獲取貨幣符號映射（提前定義，用於錯誤提示）
+        currency_symbol_map = {
+            CurrencyType.USDT: "USDT",
+            CurrencyType.TON: "TON",
+            CurrencyType.STARS: "Stars",
+            CurrencyType.POINTS: "Points",
+        }
+        
+        # 檢查是否踩雷（僅紅包炸彈）
+        is_bomb = False
+        penalty_amount = None
+        if packet.packet_type == RedPacketType.EQUAL and packet.bomb_number is not None:
+            # 獲取金額的最後一位小數
+            amount_str = f"{float(claim_amount):.8f}"
+            # 找到最後一個非零數字
+            last_digit = None
+            for char in reversed(amount_str):
+                if char.isdigit() and char != '0':
+                    last_digit = int(char)
+                    break
+            
+            # 如果最後一位數字等於炸彈數字，則踩雷
+            if last_digit == packet.bomb_number:
+                is_bomb = True
+                
+                # 計算賠付金額
+                # 單雷（10個包）：賠付全額
+                # 雙雷（5個包）：賠付雙倍
+                if packet.total_count == 10:  # 單雷
+                    penalty_amount = packet.total_amount
+                else:  # 雙雷（5個包）
+                    penalty_amount = packet.total_amount * Decimal("2")
+                
+                # 檢查用戶餘額是否足夠賠付
+                currency_field_map = {
+                    CurrencyType.USDT: "balance_usdt",
+                    CurrencyType.TON: "balance_ton",
+                    CurrencyType.STARS: "balance_stars",
+                    CurrencyType.POINTS: "balance_points",
+                }
+                balance_field = currency_field_map.get(packet.currency, "balance_usdt")
+                current_balance = getattr(db_user, balance_field, 0) or Decimal(0)
+                
+                if current_balance < penalty_amount:
+                    currency_symbol = currency_symbol_map.get(packet.currency, "USDT")
+                    await query.answer(
+                        f"⚠️ 餘額不足！需要 {float(penalty_amount):.2f} {currency_symbol} 才能參與搶紅包（可能踩雷需賠付）",
+                        show_alert=True
+                    )
+                    return
         
         # 創建領取記錄
         claim = RedPacketClaim(
             red_packet_id=packet.id,
             user_id=db_user.id,
             amount=claim_amount,
+            is_bomb=is_bomb,
+            penalty_amount=penalty_amount if is_bomb else None,
         )
         db.add(claim)
         
@@ -206,8 +264,23 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             CurrencyType.POINTS: "balance_points",
         }
         balance_field = currency_field_map.get(packet.currency, "balance_usdt")
-        current_balance = getattr(db_user, balance_field, 0) or 0
-        setattr(db_user, balance_field, current_balance + claim_amount)
+        current_balance = getattr(db_user, balance_field, 0) or Decimal(0)
+        
+        if is_bomb:
+            # 踩雷：扣除賠付金額（金額退回紅包池，用戶需要賠付）
+            # 用戶獲得 claim_amount，但需要賠付 penalty_amount
+            # 實際餘額變化：claim_amount - penalty_amount（通常是負數）
+            net_change = claim_amount - penalty_amount
+            setattr(db_user, balance_field, current_balance + net_change)
+            
+            # 發送者獲得賠付金額
+            sender = db.query(User).filter(User.id == packet.sender_id).first()
+            if sender:
+                sender_balance = getattr(sender, balance_field, 0) or Decimal(0)
+                setattr(sender, balance_field, sender_balance + penalty_amount)
+        else:
+            # 正常領取：增加餘額
+            setattr(db_user, balance_field, current_balance + claim_amount)
         
         db.commit()
         
@@ -232,18 +305,42 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             CurrencyType.POINTS: "Points",
         }
         currency_symbol = currency_symbol_map.get(packet_currency, "USDT")
+        
+        # 檢查是否踩雷（從 claim 記錄中讀取）
+        is_bomb = claim.is_bomb if hasattr(claim, 'is_bomb') else False
+        penalty_amount = claim.penalty_amount if hasattr(claim, 'penalty_amount') and claim.penalty_amount else None
+        packet_bomb_number = packet.bomb_number
+        packet_type = packet.packet_type
     
-    await query.answer(f"🎉 恭喜獲得 {float(claim_amount):.4f} {currency_symbol}！", show_alert=True)
+    # 根據是否踩雷顯示不同的提示
+    if is_bomb and penalty_amount:
+        thunder_type = "單雷" if total_count == 10 else "雙雷"
+        await query.answer(
+            f"💣 踩雷了！需要賠付 {float(penalty_amount):.2f} {currency_symbol}（{thunder_type}）",
+            show_alert=True
+        )
+    else:
+        await query.answer(f"🎉 恭喜獲得 {float(claim_amount):.4f} {currency_symbol}！", show_alert=True)
     
     # 更新消息（使用已保存的變量，而不是數據庫對象）
     text = f"""
 🧧 *{sender_name} 發了一個紅包*
 
 💰 {total_amount:.2f} {currency_symbol} | 👥 {claimed_count}/{total_count} 份
-📝 {packet_message}
-
-{user.first_name} 搶到了 {float(claim_amount):.4f} {currency_symbol}！
 """
+    
+    # 如果是紅包炸彈，顯示炸彈信息
+    if packet_type == RedPacketType.EQUAL and packet_bomb_number is not None:
+        thunder_type = "單雷" if total_count == 10 else "雙雷"
+        text += f"💣 炸彈數字: {packet_bomb_number} | {thunder_type}\n"
+    
+    text += f"📝 {packet_message}\n\n"
+    
+    # 顯示搶包結果
+    if is_bomb and penalty_amount:
+        text += f"💣 {user.first_name} 搶到了 {float(claim_amount):.4f} {currency_symbol}，踩雷了！需賠付 {float(penalty_amount):.2f} {currency_symbol}\n"
+    else:
+        text += f"{user.first_name} 搶到了 {float(claim_amount):.4f} {currency_symbol}！\n"
     
     if packet_status == RedPacketStatus.COMPLETED:
         text += "\n✅ 紅包已搶完"

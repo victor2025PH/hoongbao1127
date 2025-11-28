@@ -119,6 +119,20 @@ async def create_red_packet(
     if current_balance < Decimal(str(request.total_amount)):
         raise HTTPException(status_code=400, detail="Insufficient balance")
     
+    # 驗證紅包炸彈規則
+    if request.packet_type == RedPacketType.EQUAL:  # 紅包炸彈（固定金額）
+        if request.bomb_number is None:
+            raise HTTPException(status_code=400, detail="Bomb number is required for bomb red packet")
+        if request.bomb_number < 0 or request.bomb_number > 9:
+            raise HTTPException(status_code=400, detail="Bomb number must be between 0 and 9")
+        
+        # 驗證紅包數量：單雷10個，雙雷5個
+        if request.total_count not in [5, 10]:
+            raise HTTPException(
+                status_code=400,
+                detail="Bomb red packet count must be 5 (雙雷) or 10 (單雷)"
+            )
+    
     # 扣除餘額
     setattr(sender, balance_field, current_balance - Decimal(str(request.total_amount)))
     
@@ -133,6 +147,7 @@ async def create_red_packet(
         message=request.message,
         chat_id=request.chat_id,
         chat_title=request.chat_title,
+        bomb_number=request.bomb_number if request.packet_type == RedPacketType.EQUAL else None,
         expires_at=datetime.utcnow() + timedelta(hours=24),
     )
     
@@ -155,10 +170,14 @@ async def create_red_packet(
 
 💰 {float(request.total_amount):.2f} {currency_symbol} | 👥 {request.total_count} 份
 🎮 {packet_type_text}
-📝 {request.message}
-
-點擊下方按鈕搶紅包！
 """
+            
+            # 如果是紅包炸彈，顯示炸彈數字和規則
+            if request.packet_type == RedPacketType.EQUAL and request.bomb_number is not None:
+                thunder_type = "單雷" if request.total_count == 10 else "雙雷"
+                text += f"💣 炸彈數字: {request.bomb_number} | {thunder_type}\n"
+            
+            text += f"📝 {request.message}\n\n點擊下方按鈕搶紅包！"
             
             keyboard = [[InlineKeyboardButton("🧧 搶紅包", callback_data=f"claim:{packet.uuid}")]]
             

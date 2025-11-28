@@ -348,6 +348,15 @@ export default function SendRedPacket() {
       showAlert(t('bomb_number_required'), 'warning')
       return
     }
+    
+    // 驗證紅包炸彈數量：必須是5個（雙雷）或10個（單雷）
+    if (packetType === 'fixed') {
+      const count = parseInt(quantity)
+      if (count !== 5 && count !== 10) {
+        showAlert('紅包炸彈數量必須是 5 個（雙雷）或 10 個（單雷）', 'warning')
+        return
+      }
+    }
 
     haptic('medium')
     sendMutation.mutate({
@@ -799,50 +808,79 @@ export default function SendRedPacket() {
       {/* 遊戲規則說明彈窗 */}
       {showRulesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowRulesModal(false)}>
-          <div className="w-full max-w-md bg-brand-darker rounded-2xl border border-white/10 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="p-4 border-b border-white/5 flex items-center justify-between">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <Info size={20} className="text-brand-red" />
-                {t('game_rules')}
-              </h3>
+          <div className="bg-brand-darker rounded-2xl p-6 max-w-md w-full border border-white/10 shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* 標題 */}
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-brand-red flex items-center justify-center">
+                  <Info size={16} className="text-white" />
+                </div>
+                <h3 className="text-white text-lg font-bold">遊戲規則</h3>
+              </div>
               <button
                 onClick={() => setShowRulesModal(false)}
                 className="p-1 hover:bg-white/5 rounded-lg transition-colors"
               >
-                <X size={20} />
+                <X size={20} className="text-white" />
               </button>
             </div>
-            <div className="p-4 space-y-4">
-              {/* 最佳手氣規則 */}
-              <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl p-4 border border-blue-500/20">
-                <h4 className="text-base font-bold text-white mb-2 flex items-center gap-2">
-                  <Gift size={18} className="text-blue-400" />
-                  {t('random_amount')}
-                </h4>
+
+            {/* 規則內容 */}
+            <div className="space-y-4 overflow-y-auto flex-1">
+              {/* 手氣最佳 */}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Gift size={20} className="text-blue-400" />
+                  <h4 className="text-white font-semibold">手氣最佳</h4>
+                </div>
                 <p className="text-gray-300 text-sm leading-relaxed">
-                  {t('best_mvp_rules')}
+                  手氣最佳：隨機金額分配，領取完成後金額最大的用戶將被標記為「最佳手氣」。
                 </p>
               </div>
 
-              {/* 紅包炸彈規則 */}
-              <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 rounded-xl p-4 border border-orange-500/20">
-                <h4 className="text-base font-bold text-white mb-2 flex items-center gap-2">
-                  <Bomb size={18} className="text-orange-400" />
-                  {t('fixed_amount')}
-                </h4>
-                <p className="text-gray-300 text-sm leading-relaxed">
-                  {t('bomb_rules')}
-                </p>
+              {/* 紅包炸彈 */}
+              <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Bomb size={20} className="text-orange-400" />
+                  <h4 className="text-white font-semibold">紅包炸彈</h4>
+                </div>
+                <div className="text-gray-300 text-sm leading-relaxed space-y-2">
+                  <p><strong className="text-white">發包規則：</strong></p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>紅包金額可事先約定（建議 50-200 元）</li>
+                    <li>紅包個數：<strong className="text-orange-400">10 個（單雷）</strong> 或 <strong className="text-orange-400">5 個（雙雷）</strong></li>
+                    <li>需要設置炸彈數字（0-9），例如「200/1」表示 200 元，炸彈數字是 1</li>
+                  </ul>
+                  
+                  <p className="mt-3"><strong className="text-white">搶包規則：</strong></p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>固定金額分配（平分）</li>
+                    <li>如果搶到的紅包<strong className="text-green-400">最後一位數字不是「雷」</strong>，這些錢就是「福利」，歸搶到的人所有</li>
+                    <li>如果搶到的紅包<strong className="text-red-400">最後一位數正好是「雷」</strong>，就「踩雷」了，需要賠錢</li>
+                  </ul>
+                  
+                  <p className="mt-3"><strong className="text-white">賠錢規則：</strong></p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li><strong className="text-orange-400">單雷（10 個包）</strong>：搶到「雷」的人需要賠給發包人紅包的全額金額（例如 200 元）</li>
+                    <li><strong className="text-orange-400">雙雷（5 個包）</strong>：搶到「雷」的人需要賠雙倍金額（例如 400 元）</li>
+                    <li>如果有多人同時「踩雷」，還需要添加「彩頭」，金額事先約定，隨著同時踩雷的人數增加，彩頭金額也會增加</li>
+                  </ul>
+                  
+                  <p className="mt-3"><strong className="text-red-400">⚠️ 重要提示：</strong></p>
+                  <p className="text-red-300 text-xs">
+                    如果您的餘額不夠雙倍賠付的金額（雙雷）或全額賠付（單雷），就不能參與搶紅包。請確保餘額充足！
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="p-4 border-t border-white/5">
-              <button
-                onClick={() => setShowRulesModal(false)}
-                className="w-full py-3 bg-gradient-to-r from-brand-red to-orange-500 rounded-xl text-white font-bold"
-              >
-                {t('got_it')}
-              </button>
-            </div>
+
+            {/* 關閉按鈕 */}
+            <button
+              onClick={() => setShowRulesModal(false)}
+              className="w-full mt-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl text-white font-semibold hover:from-orange-600 hover:to-red-600 transition-all shrink-0"
+            >
+              知道了
+            </button>
           </div>
         </div>
       )}
