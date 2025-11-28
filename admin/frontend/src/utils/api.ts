@@ -42,7 +42,7 @@ export const authApi = {
 }
 
 export const userApi = {
-  list: (params?: any) => api.get('/api/users/list', { params }),
+  list: (params?: any) => api.get('/v1/admin/users/list', { params }),
   detail: (id: number) => api.get(`/api/users/${id}`),
   detailFull: (id: number) => api.get(`/v1/admin/users/${id}/detail`),
   adjustBalance: (data: any) => api.post('/v1/admin/users/adjust-balance', data),
