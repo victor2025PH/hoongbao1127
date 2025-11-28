@@ -225,6 +225,54 @@ export default function SendRedPacket() {
     }
   }
 
+  // 保存群組到歷史記錄
+  const saveChatToHistory = (chat: ChatInfo) => {
+    if (typeof window === 'undefined' || !chat) return
+    
+    const storageKey = `redpacket_chat_history_${tgId || 'default'}`
+    const historyStr = localStorage.getItem(storageKey)
+    let history: ChatInfo[] = historyStr ? JSON.parse(historyStr) : []
+    
+    // 檢查是否已存在（根據 id）
+    const existingIndex = history.findIndex((c: ChatInfo) => c.id === chat.id)
+    if (existingIndex >= 0) {
+      // 更新現有記錄（移到最前面）
+      history.splice(existingIndex, 1)
+    }
+    
+    // 添加到最前面
+    history.unshift({
+      ...chat,
+      last_used: new Date().toISOString(),
+    })
+    
+    // 限制最多保存 20 條記錄
+    history = history.slice(0, 20)
+    
+    localStorage.setItem(storageKey, JSON.stringify(history))
+  }
+
+  // 獲取群組歷史記錄
+  const getChatHistory = (): ChatInfo[] => {
+    if (typeof window === 'undefined') return []
+    
+    const storageKey = `redpacket_chat_history_${tgId || 'default'}`
+    const historyStr = localStorage.getItem(storageKey)
+    return historyStr ? JSON.parse(historyStr) : []
+  }
+
+  // 刪除群組歷史記錄
+  const deleteChatFromHistory = (chatId: number) => {
+    if (typeof window === 'undefined') return
+    
+    const storageKey = `redpacket_chat_history_${tgId || 'default'}`
+    const historyStr = localStorage.getItem(storageKey)
+    let history: ChatInfo[] = historyStr ? JSON.parse(historyStr) : []
+    
+    history = history.filter((c: ChatInfo) => c.id !== chatId)
+    localStorage.setItem(storageKey, JSON.stringify(history))
+  }
+
   // 發送紅包
   const sendMutation = useMutation({
     mutationFn: sendRedPacket,
@@ -232,6 +280,11 @@ export default function SendRedPacket() {
       haptic('success')
       queryClient.invalidateQueries({ queryKey: ['balance'] })
       queryClient.invalidateQueries({ queryKey: ['redpackets'] })
+      
+      // 保存群組到歷史記錄
+      if (selectedChat) {
+        saveChatToHistory(selectedChat)
+      }
       
       // 如果機器人不在群組中，顯示分享鏈接
       if (!data.message_sent && data.share_link) {
@@ -502,6 +555,102 @@ export default function SendRedPacket() {
             </div>
             
             <div className="overflow-y-auto max-h-[60vh]">
+              {/* 顯示歷史記錄（當沒有搜索時） */}
+              {searchQuery.length === 0 && (() => {
+                const chatHistory = getChatHistory()
+                return chatHistory.length > 0 ? (
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-medium text-gray-400">最近使用的群組</h4>
+                      <span className="text-xs text-gray-500">{chatHistory.length} 個</span>
+                    </div>
+                    {chatHistory.map((chat: ChatInfo) => (
+                      <div
+                        key={chat.id}
+                        className="flex items-center justify-between p-3 mb-2 bg-brand-dark rounded-xl border border-white/5 hover:border-brand-red/50 transition-colors group"
+                      >
+                        <button
+                          onClick={async () => {
+                            await handleSelectChat(chat)
+                            setShowChatModal(false)
+                            setSearchQuery('')
+                          }}
+                          className="flex-1 text-left"
+                        >
+                          <div className="flex items-center gap-3">
+                            {chat.type === 'group' || chat.type === 'supergroup' ? (
+                              <Users size={20} className="text-brand-red" />
+                            ) : (
+                              <User size={20} className="text-blue-400" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-white font-medium truncate">{chat.title || chat.username || `Chat ${chat.id}`}</div>
+                              {chat.username && (
+                                <div className="text-gray-400 text-xs truncate">@{chat.username}</div>
+                              )}
+                              {chat.status_message && (
+                                <div className="text-xs mt-1">
+                                  {chat.user_in_group && (
+                                    <span className="text-green-400 mr-2">✓ 你在群中</span>
+                                  )}
+                                  {chat.bot_in_group && (
+                                    <span className="text-blue-400">✓ 機器人在</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                        <div className="flex items-center gap-2 ml-2">
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              // 更新記錄：重新搜索並更新信息
+                              try {
+                                const updatedChat = await searchChats(chat.username || chat.title || String(chat.id), tgId || undefined)
+                                if (updatedChat && updatedChat.length > 0) {
+                                  const found = updatedChat.find((c: ChatInfo) => c.id === chat.id) || updatedChat[0]
+                                  saveChatToHistory(found)
+                                  setSelectedChat(found)
+                                  setShowChatModal(false)
+                                  setSearchQuery('')
+                                  showAlert('群組信息已更新', 'success')
+                                }
+                              } catch (error) {
+                                showAlert('更新失敗，請重試', 'error')
+                              }
+                            }}
+                            className="p-2 hover:bg-white/5 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                            title="更新群組信息"
+                          >
+                            <RefreshCw size={16} className="text-gray-400" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteChatFromHistory(chat.id)
+                              if (selectedChat?.id === chat.id) {
+                                setSelectedChat(null)
+                              }
+                            }}
+                            className="p-2 hover:bg-red-500/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                            title="刪除記錄"
+                          >
+                            <Trash2 size={16} className="text-red-400" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-gray-500">
+                    <Users size={32} className="mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">暫無歷史記錄</p>
+                    <p className="text-xs mt-1">發送紅包後會自動保存</p>
+                  </div>
+                )
+              })()}
+
               {/* 顯示搜索結果（同時顯示群組和用戶） */}
               {searchQuery.length > 0 ? (
                 <>

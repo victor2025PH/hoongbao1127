@@ -109,14 +109,15 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user = query.from_user
     
+    # 先快速響應 callback query，避免超時
+    await query.answer("處理中...", cache_time=0)
+    
     # 解析紅包 UUID
     try:
         packet_uuid = query.data.split(":")[1]
     except (IndexError, AttributeError):
         await query.answer("無效的紅包鏈接", show_alert=True)
         return
-    
-    await query.answer()
     
     with get_db() as db:
         # 查找紅包
