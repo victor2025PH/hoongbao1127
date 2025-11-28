@@ -109,9 +109,6 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user = query.from_user
     
-    # 先快速響應 callback query，避免超時
-    await query.answer("處理中...", cache_time=0)
-    
     # 解析紅包 UUID
     try:
         packet_uuid = query.data.split(":")[1]
@@ -119,6 +116,7 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer("無效的紅包鏈接", show_alert=True)
         return
     
+    # 先快速檢查是否已領取（避免重複搶包時只顯示"處理中"）
     with get_db() as db:
         # 查找紅包
         packet = db.query(RedPacket).filter(RedPacket.uuid == packet_uuid).first()
@@ -145,7 +143,7 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.commit()
             db.refresh(db_user)
         
-        # 檢查是否已領取
+        # 檢查是否已領取（在顯示"處理中"之前檢查）
         existing = db.query(RedPacketClaim).filter(
             RedPacketClaim.red_packet_id == packet.id,
             RedPacketClaim.user_id == db_user.id
@@ -162,6 +160,12 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             currency_symbol = currency_symbol_map.get(packet.currency, "USDT")
             await query.answer(f"你已經領過了！獲得 {float(existing.amount):.4f} {currency_symbol}", show_alert=True)
             return
+    
+    # 如果未領取，現在顯示"處理中"並繼續處理
+    await query.answer("處理中...", cache_time=0)
+    
+    # 重新打開數據庫會話進行實際的搶包操作
+    with get_db() as db:
         
         # 計算金額
         remaining_amount = packet.total_amount - packet.claimed_amount
