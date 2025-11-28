@@ -3,7 +3,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, Trash2, Reply, CheckCircle, Circle, Clock, MessageSquare, Bell, Info, Sparkles } from 'lucide-react'
+import { X, Trash2, Reply, CheckCircle, Circle, Clock, MessageSquare, Bell, Info, Sparkles, LucideIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getMessages, markMessageAsRead, deleteMessage, replyMessage, Message } from '../utils/api'
 import { showAlert, showConfirm } from '../utils/telegram'
@@ -15,7 +15,7 @@ interface MessagesPanelProps {
 }
 
 // 消息類型圖標組件映射
-const messageTypeIconComponents: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+const messageTypeIconComponents: Record<string, LucideIcon> = {
   system: Bell,
   redpacket: Sparkles,
   balance: Circle,
@@ -80,7 +80,7 @@ export default function MessagesPanel({ isOpen, onClose }: MessagesPanelProps) {
       setSelectedMessage(null)
     },
     onError: (error: Error) => {
-      playSound('error')
+      playSound('notification')
       showAlert(error.message || '刪除失敗', 'error')
     },
   })
@@ -97,7 +97,7 @@ export default function MessagesPanel({ isOpen, onClose }: MessagesPanelProps) {
       queryClient.invalidateQueries({ queryKey: ['messages'] })
     },
     onError: (error: Error) => {
-      playSound('error')
+      playSound('notification')
       showAlert(error.message || '回復失敗', 'error')
     },
   })
