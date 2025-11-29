@@ -8,6 +8,8 @@ from loguru import logger
 from shared.config.settings import get_settings
 from shared.database.connection import get_db
 from shared.database.models import User
+from bot.utils.user_helpers import get_or_create_user
+from bot.utils.logging_helpers import log_user_action
 
 settings = get_settings()
 
@@ -16,39 +18,49 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """處理 /start 命令"""
     user = update.effective_user
     
-    # 創建或更新用戶
+    # 處理邀請碼
+    invite_code = None
+    if context.args and len(context.args) > 0:
+        invite_code = context.args[0]
+    
+    # 使用統一的用戶獲取函數
+    db_user = await get_or_create_user(
+        tg_id=user.id,
+        username=user.username,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        use_cache=False  # 註冊時不使用緩存，確保數據最新
+    )
+    
+    # 在會話內獲取 invited_by 狀態（避免會話分離錯誤）
     with get_db() as db:
-        db_user = db.query(User).filter(User.tg_id == user.id).first()
+        # 重新查詢用戶以確保在會話內
+        db_user_refreshed = db.query(User).filter(User.tg_id == user.id).first()
+        if not db_user_refreshed:
+            logger.error(f"User {user.id} not found after creation")
+            await update.message.reply_text("發生錯誤，請稍後再試")
+            return
         
-        if not db_user:
-            # 處理邀請碼
-            invite_code = None
-            if context.args and len(context.args) > 0:
-                invite_code = context.args[0]
-            
-            db_user = User(
-                tg_id=user.id,
-                username=user.username,
-                first_name=user.first_name,
-                last_name=user.last_name,
-            )
-            
-            # 處理邀請關係
-            if invite_code:
-                inviter = db.query(User).filter(User.invite_code == invite_code).first()
-                if inviter and inviter.tg_id != user.id:
-                    db_user.invited_by = inviter.tg_id
-                    inviter.invite_count = (inviter.invite_count or 0) + 1
-                    logger.info(f"User {user.id} invited by {inviter.tg_id}")
-            
-            db.add(db_user)
-            db.commit()
-            logger.info(f"New user registered: {user.id}")
-        else:
-            db_user.username = user.username
-            db_user.first_name = user.first_name
-            db_user.last_name = user.last_name
-            db.commit()
+        is_new_user = not db_user_refreshed.invited_by
+        
+        # 處理邀請關係
+        if invite_code and not db_user_refreshed.invited_by:
+            inviter = db.query(User).filter(User.invite_code == invite_code).first()
+            if inviter and inviter.tg_id != user.id:
+                db_user_refreshed.invited_by = inviter.tg_id
+                inviter.invite_count = (inviter.invite_count or 0) + 1
+                db.commit()
+                # 清除緩存
+                from bot.utils.cache import UserCache
+                UserCache.invalidate(inviter.tg_id)
+                UserCache.invalidate(user.id)
+                logger.info(f"User {user.id} invited by {inviter.tg_id}")
+                log_user_action(user.id, "invited", {"inviter_id": inviter.tg_id, "invite_code": invite_code})
+                is_new_user = False  # 更新狀態
+        
+        # 記錄用戶操作（在會話內完成）
+        log_user_action(user.id, "start", {"is_new": is_new_user})
+    logger.info(f"User {user.id} ({user.username}) sent /start command")
     
     # 構建歡迎消息
     welcome_text = f"""
@@ -65,24 +77,42 @@ Hi {user.first_name}！
 快來試試吧！👇
 """
     
-    # 構建按鈕
-    keyboard = [
-        [InlineKeyboardButton("🎮 打開遊戲", web_app=WebAppInfo(url=settings.MINIAPP_URL))],
-        [
-            InlineKeyboardButton("💰 我的錢包", callback_data="wallet:view"),
-            InlineKeyboardButton("📅 每日簽到", callback_data="checkin:do"),
-        ],
-        [
-            InlineKeyboardButton("👥 邀請好友", callback_data="invite:share"),
-            InlineKeyboardButton("❓ 幫助", callback_data="help:main"),
-        ],
-    ]
+    # 使用主回覆鍵盤和內聯鍵盤
+    from bot.keyboards import get_main_menu
+    from bot.keyboards.reply_keyboards import get_main_reply_keyboard
     
-    await update.message.reply_text(
-        welcome_text,
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-    )
+    try:
+        # 先設置回覆鍵盤（在輸入框下方）- 這會一直顯示
+        reply_keyboard = get_main_reply_keyboard()
+        logger.info(f"Preparing to send reply keyboard to user {user.id}")
+        logger.debug(f"Reply keyboard: {reply_keyboard}")
+        
+        result = await update.message.reply_text(
+            welcome_text,
+            parse_mode="Markdown",
+            reply_markup=reply_keyboard,  # 回覆鍵盤（在輸入框下方，一直顯示）
+        )
+        logger.info(f"✓ Reply keyboard sent successfully to user {user.id}, message_id: {result.message_id}")
+    except Exception as e:
+        logger.error(f"✗ Error sending reply keyboard to user {user.id}: {e}", exc_info=True)
+        # 如果回覆鍵盤失敗，至少發送歡迎消息
+        try:
+            await update.message.reply_text(
+                welcome_text,
+                parse_mode="Markdown",
+            )
+            logger.info(f"✓ Fallback welcome message sent to user {user.id}")
+        except Exception as e2:
+            logger.error(f"✗ Failed to send fallback message: {e2}", exc_info=True)
+    
+    # 然後發送內聯鍵盤（在消息下方，可點擊）
+    try:
+        await update.message.reply_text(
+            "💡 點擊下方按鈕或使用輸入框下方的菜單：",
+            reply_markup=get_main_menu(),  # 內聯鍵盤（在消息下方）
+        )
+    except Exception as e:
+        logger.error(f"Error sending inline keyboard: {e}", exc_info=True)
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -119,22 +149,39 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def invite_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """處理 /invite 命令"""
-    user = update.effective_user
+    from bot.utils.user_helpers import get_user_from_update
+    from bot.utils.logging_helpers import log_user_action
     
+    # 獲取用戶（帶緩存）
+    db_user = await get_user_from_update(update, context)
+    if not db_user:
+        await update.message.reply_text("請先使用 /start 註冊")
+        return
+    
+    # 在會話內處理邀請碼和獲取統計信息
     with get_db() as db:
-        db_user = db.query(User).filter(User.tg_id == user.id).first()
-        
-        if not db_user:
-            await update.message.reply_text("請先使用 /start 註冊")
+        user = db.query(User).filter(User.tg_id == db_user.tg_id).first()
+        if not user:
+            await update.message.reply_text("發生錯誤，請稍後再試")
             return
         
-        # 生成邀請碼
-        if not db_user.invite_code:
+        # 生成邀請碼（如果沒有）
+        if not user.invite_code:
             import secrets
-            db_user.invite_code = secrets.token_urlsafe(8)
+            user.invite_code = secrets.token_urlsafe(8)
             db.commit()
+            # 清除緩存
+            from bot.utils.cache import UserCache
+            UserCache.invalidate(user.tg_id)
         
-        invite_link = f"https://t.me/{settings.BOT_USERNAME}?start={db_user.invite_code}"
+        invite_code = user.invite_code
+        invite_count = user.invite_count or 0
+        invite_earnings = float(user.invite_earnings or 0)
+    
+    # 記錄操作
+    log_user_action(db_user.tg_id, "invite_view")
+    
+    invite_link = f"https://t.me/{settings.BOT_USERNAME}?start={invite_code}"
     
     invite_text = f"""
 👥 *邀請好友*
@@ -143,8 +190,8 @@ async def invite_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 `{invite_link}`
 
 📊 邀請統計：
-• 已邀請：{db_user.invite_count or 0} 人
-• 累計收益：{float(db_user.invite_earnings or 0):.2f} USDT
+• 已邀請：{invite_count} 人
+• 累計收益：{invite_earnings:.2f} USDT
 
 💡 邀請規則：
 好友通過你的鏈接註冊後，你將獲得其所有交易的 10% 返佣！
