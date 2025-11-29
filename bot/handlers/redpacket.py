@@ -427,9 +427,9 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         thunder_type = "單雷" if total_count == 10 else "雙雷"
         alert_text = f"💣 踩雷了！需要賠付 {float(penalty_amount_value):.2f} {currency_symbol}（{thunder_type}）"
     elif is_luckiest_value and packet_status == RedPacketStatus.COMPLETED:
-        alert_text = f"🎉 恭喜獲得 {float(claim_amount):.4f} {currency_symbol}！\n🏆 你是最佳手氣！"
+        alert_text = f"🎉 恭喜獲得 {float(claim_amount):.2f} {currency_symbol}！\n🏆 你是最佳手氣！"
     else:
-        alert_text = f"🎉 恭喜獲得 {float(claim_amount):.4f} {currency_symbol}！"
+        alert_text = f"🎉 恭喜獲得 {float(claim_amount):.2f} {currency_symbol}！"
     
     # 確保彈窗提示始終顯示（無論什麼情況）
     try:
