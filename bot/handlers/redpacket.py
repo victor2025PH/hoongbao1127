@@ -355,12 +355,52 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if luckiest_claim.id == claim.id:
                         is_luckiest = True
         
+        # 保存是否剛完成（用於發送提醒消息）
+        just_completed = False
         if packet.claimed_count >= packet.total_count:
+            if packet.status != RedPacketStatus.COMPLETED:
+                just_completed = True
             packet.status = RedPacketStatus.COMPLETED
             packet.completed_at = datetime.utcnow()
         
         # 保存 is_luckiest 到變量（在會話內）
         is_luckiest_value = is_luckiest
+        
+        # 保存是否剛完成和最佳手氣用戶信息（用於發送提醒消息）
+        just_completed_value = just_completed
+        luckiest_user_tg_id = None
+        luckiest_user_name = None
+        if just_completed_value:
+            if packet.packet_type == RedPacketType.RANDOM:
+                # 手氣最佳：找到最佳手氣用戶
+                luckiest_claim = db.query(RedPacketClaim).filter(
+                    RedPacketClaim.red_packet_id == packet.id,
+                    RedPacketClaim.is_luckiest == True
+                ).first()
+                if luckiest_claim:
+                    luckiest_user = db.query(User).filter(User.id == luckiest_claim.user_id).first()
+                    if luckiest_user:
+                        luckiest_user_tg_id = luckiest_user.tg_id
+                        luckiest_user_name = luckiest_user.first_name or '用戶'
+            elif packet.packet_type == RedPacketType.EQUAL:
+                # 炸彈紅包：找到贏最多的人（金額最大的，排除踩雷的）
+                all_claims_for_winner = db.query(RedPacketClaim).filter(
+                    RedPacketClaim.red_packet_id == packet.id
+                ).all()
+                max_net_amount = Decimal("-999999")
+                winner_user_id = None
+                for claim_record in all_claims_for_winner:
+                    net_amount = claim_record.amount
+                    if claim_record.is_bomb and claim_record.penalty_amount:
+                        net_amount = net_amount - claim_record.penalty_amount
+                    if net_amount > max_net_amount:
+                        max_net_amount = net_amount
+                        winner_user_id = claim_record.user_id
+                if winner_user_id:
+                    winner_user = db.query(User).filter(User.id == winner_user_id).first()
+                    if winner_user:
+                        luckiest_user_tg_id = winner_user.tg_id
+                        luckiest_user_name = winner_user.first_name or '用戶'
         
         # 更新用戶餘額（根據貨幣類型）
         currency_field_map = {
@@ -538,4 +578,46 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
         except Exception as e2:
             logger.error(f"Failed to send backup message: {e2}")
+    
+    # 如果紅包剛完成，發送提醒消息給下一個發送者
+    if just_completed_value and luckiest_user_tg_id and query.message and query.message.chat:
+        try:
+            bot = Bot(token=settings.BOT_TOKEN)
+            
+            # 構建提醒消息
+            reminder_text = ""
+            if packet_type == RedPacketType.RANDOM:
+                # 手氣最佳提醒
+                reminder_text = f"""🎉 *恭喜 {luckiest_user_name} 成為最佳手氣！*
+
+📢 *請發送下一個紅包*
+💰 金額：{total_amount:.2f} {currency_symbol}
+👥 數量：{total_count} 份
+🎮 類型：手氣最佳
+📝 祝福語：{packet_message}
+
+💡 提示：您可以使用 miniapp 或 /send 命令發送紅包"""
+            elif packet_type == RedPacketType.EQUAL and packet_bomb_number is not None:
+                # 炸彈紅包提醒
+                thunder_type = "單雷" if total_count == 10 else "雙雷"
+                reminder_text = f"""💣 *恭喜 {luckiest_user_name} 贏得最多！*
+
+📢 *請發送下一個紅包炸彈*
+💰 金額：{total_amount:.2f} {currency_symbol}
+👥 數量：{total_count} 份（{thunder_type}）
+💣 炸彈數字：{packet_bomb_number}
+📝 祝福語：{packet_message}
+
+💡 提示：您可以使用 miniapp 或 /send 命令發送紅包"""
+            
+            if reminder_text:
+                await bot.send_message(
+                    chat_id=query.message.chat.id,
+                    text=reminder_text,
+                    parse_mode="Markdown",
+                    reply_to_message_id=query.message.message_id
+                )
+                logger.info(f"Reminder message sent to {luckiest_user_name} (tg_id: {luckiest_user_tg_id}) for next red packet")
+        except Exception as e:
+            logger.error(f"Failed to send reminder message: {e}")
 
