@@ -217,7 +217,12 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # 炸彈紅包也需要隨機金額，但總和必須等於總金額
             # 最後一個包直接取剩餘金額，其他包隨機分配
             if remaining_count == 1:
-                claim_amount = remaining_amount
+                # 最後一份直接取剩餘金額，確保至少 0.01
+                claim_amount = max(remaining_amount, Decimal("0.01"))
+                claim_amount = round(claim_amount, 2)  # 保留兩位小數
+                # 如果四捨五入後為 0，確保至少 0.01
+                if claim_amount <= 0:
+                    claim_amount = Decimal("0.01")
             else:
                 # 計算平均金額
                 avg_amount = remaining_amount / Decimal(str(remaining_count))
@@ -226,21 +231,29 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 max_amount = avg_amount * Decimal("1.5")
                 # 確保不會超過剩餘金額，且為其他包留出至少 0.01
                 max_amount = min(max_amount, remaining_amount - Decimal("0.01") * (remaining_count - 1))
+                # 確保 max_amount 至少等於 min_amount
+                if max_amount < min_amount:
+                    max_amount = min_amount
                 # 生成隨機金額
                 claim_amount = Decimal(str(random.uniform(float(min_amount), float(max_amount))))
                 # 確保至少 0.01
                 claim_amount = max(claim_amount, Decimal("0.01"))
                 # 確保不超過剩餘金額
                 claim_amount = min(claim_amount, remaining_amount - Decimal("0.01") * (remaining_count - 1))
-            claim_amount = round(claim_amount, 2)  # 保留兩位小數
+                claim_amount = round(claim_amount, 2)  # 保留兩位小數
         else:  # 手氣最佳（隨機金額）
             if remaining_count == 1:
-                claim_amount = remaining_amount
+                # 最後一份直接取剩餘金額，確保至少 0.01
+                claim_amount = max(remaining_amount, Decimal("0.01"))
+                claim_amount = round(claim_amount, 2)  # 保留兩位小數
+                # 如果四捨五入後為 0，確保至少 0.01
+                if claim_amount <= 0:
+                    claim_amount = Decimal("0.01")
             else:
                 max_amount = remaining_amount * Decimal("0.9") / remaining_count * 2
                 claim_amount = Decimal(str(random.uniform(0.01, float(max_amount))))  # 最小 0.01
                 claim_amount = min(claim_amount, remaining_amount - Decimal("0.01") * (remaining_count - 1))
-            claim_amount = round(claim_amount, 2)  # 保留兩位小數
+                claim_amount = round(claim_amount, 2)  # 保留兩位小數
         
         # 獲取貨幣符號映射（提前定義，用於錯誤提示）
         currency_symbol_map = {
