@@ -117,6 +117,8 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     # 先快速檢查是否已領取（避免重複搶包時只顯示"處理中"）
+    packet_id = None
+    user_id = None
     with get_db() as db:
         # 查找紅包
         packet = db.query(RedPacket).filter(RedPacket.uuid == packet_uuid).first()
@@ -125,11 +127,17 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("紅包不存在", show_alert=True)
             return
         
-        if packet.status != RedPacketStatus.ACTIVE:
+        # 在會話內保存 ID（避免 DetachedInstanceError）
+        packet_id = packet.id
+        packet_status_check = packet.status
+        packet_expires_at = packet.expires_at
+        packet_currency = packet.currency
+        
+        if packet_status_check != RedPacketStatus.ACTIVE:
             await query.answer("紅包已被搶完或已過期", show_alert=True)
             return
         
-        if packet.expires_at and packet.expires_at < datetime.utcnow():
+        if packet_expires_at and packet_expires_at < datetime.utcnow():
             packet.status = RedPacketStatus.EXPIRED
             db.commit()
             await query.answer("紅包已過期", show_alert=True)
@@ -143,10 +151,13 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.commit()
             db.refresh(db_user)
         
+        # 在會話內保存 user_id
+        user_id = db_user.id
+        
         # 檢查是否已領取（在顯示"處理中"之前檢查）
         existing = db.query(RedPacketClaim).filter(
-            RedPacketClaim.red_packet_id == packet.id,
-            RedPacketClaim.user_id == db_user.id
+            RedPacketClaim.red_packet_id == packet_id,
+            RedPacketClaim.user_id == user_id
         ).first()
         
         if existing:
@@ -157,16 +168,12 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 CurrencyType.STARS: "Stars",
                 CurrencyType.POINTS: "Points",
             }
-            currency_symbol = currency_symbol_map.get(packet.currency, "USDT")
-            await query.answer(f"你已經領過了！獲得 {float(existing.amount):.4f} {currency_symbol}", show_alert=True)
+            currency_symbol = currency_symbol_map.get(packet_currency, "USDT")
+            await query.answer(f"你已經領過了！獲得 {float(existing.amount):.2f} {currency_symbol}", show_alert=True)
             return
     
     # 如果未領取，現在顯示"處理中"並繼續處理
     await query.answer("處理中...", cache_time=0)
-    
-    # 保存 packet 和 db_user 的 ID，以便在第二個會話中使用
-    packet_id = packet.id
-    user_id = db_user.id
     
     # 重新打開數據庫會話進行實際的搶包操作
     with get_db() as db:
@@ -192,7 +199,7 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 CurrencyType.POINTS: "Points",
             }
             currency_symbol = currency_symbol_map.get(packet.currency, "USDT")
-            await query.answer(f"你已經領過了！獲得 {float(existing.amount):.4f} {currency_symbol}", show_alert=True)
+            await query.answer(f"你已經領過了！獲得 {float(existing.amount):.2f} {currency_symbol}", show_alert=True)
             return
         
         # 計算金額
@@ -205,19 +212,19 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("紅包已被搶完", show_alert=True)
             return
         
-        # 根據紅包類型計算金額
+        # 根據紅包類型計算金額（保留兩位小數）
         if packet.packet_type == RedPacketType.EQUAL:  # 紅包炸彈（固定金額分配）
             # 固定金額：平分剩餘金額
             claim_amount = remaining_amount / Decimal(str(remaining_count))
-            claim_amount = round(claim_amount, 8)
+            claim_amount = round(claim_amount, 2)  # 保留兩位小數
         else:  # 手氣最佳（隨機金額）
             if remaining_count == 1:
                 claim_amount = remaining_amount
             else:
                 max_amount = remaining_amount * Decimal("0.9") / remaining_count * 2
-                claim_amount = Decimal(str(random.uniform(0.0001, float(max_amount))))
-                claim_amount = min(claim_amount, remaining_amount - Decimal("0.0001") * (remaining_count - 1))
-            claim_amount = round(claim_amount, 8)
+                claim_amount = Decimal(str(random.uniform(0.01, float(max_amount))))  # 最小 0.01
+                claim_amount = min(claim_amount, remaining_amount - Decimal("0.01") * (remaining_count - 1))
+            claim_amount = round(claim_amount, 2)  # 保留兩位小數
         
         # 獲取貨幣符號映射（提前定義，用於錯誤提示）
         currency_symbol_map = {
@@ -231,14 +238,19 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         is_bomb = False
         penalty_amount = None
         if packet.packet_type == RedPacketType.EQUAL and packet.bomb_number is not None:
-            # 獲取金額的最後一位小數
-            amount_str = f"{float(claim_amount):.8f}"
-            # 找到最後一個非零數字
+            # 獲取金額的最後一位小數（兩位小數）
+            amount_str = f"{float(claim_amount):.2f}"
+            # 找到最後一個數字（小數點後第二位）
             last_digit = None
-            for char in reversed(amount_str):
-                if char.isdigit() and char != '0':
-                    last_digit = int(char)
-                    break
+            if '.' in amount_str:
+                decimal_part = amount_str.split('.')[1]
+                if len(decimal_part) >= 2:
+                    last_digit = int(decimal_part[1])  # 小數點後第二位
+                elif len(decimal_part) == 1:
+                    last_digit = int(decimal_part[0])  # 小數點後第一位
+            else:
+                # 如果沒有小數點，取個位數
+                last_digit = int(amount_str[-1])
             
             # 如果最後一位數字等於炸彈數字，則踩雷
             if last_digit == packet.bomb_number:
@@ -458,9 +470,9 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # 添加踩雷標記
             if claimer['is_bomb'] and claimer['penalty']:
-                text += f"{rank_icon} {name_text} 搶到了 {claimer['amount']:.4f} {currency_symbol}，💣 踩雷了！需賠付 {claimer['penalty']:.2f} {currency_symbol}\n"
+                text += f"{rank_icon} {name_text} 搶到了 {claimer['amount']:.2f} {currency_symbol}，💣 踩雷了！需賠付 {claimer['penalty']:.2f} {currency_symbol}\n"
             else:
-                text += f"{rank_icon} {name_text} 搶到了 {claimer['amount']:.4f} {currency_symbol}！\n"
+                text += f"{rank_icon} {name_text} 搶到了 {claimer['amount']:.2f} {currency_symbol}！\n"
         text += "\n"
         
         # 如果紅包已搶完且是手氣最佳類型，顯示最佳手氣提示
@@ -491,7 +503,7 @@ async def claim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             if query.message and query.message.chat:
                 await query.message.reply_text(
-                    f"🎉 {user.first_name} 搶到了 {float(claim_amount):.4f} {currency_symbol}！",
+                    f"🎉 {user.first_name} 搶到了 {float(claim_amount):.2f} {currency_symbol}！",
                     parse_mode="Markdown"
                 )
         except Exception as e2:
