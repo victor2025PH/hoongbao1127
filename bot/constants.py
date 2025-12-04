@@ -56,6 +56,29 @@ class TaskConstants:
     PACKET_MASTER_TARGET = 100  # 紅包大師目標數量
 
 
+class InviteConstants:
+    """邀請獎勵相關常量"""
+    # 邀請獎勵 (USDT)
+    INVITER_REWARD = Decimal("1.0")  # 邀請人獎勵
+    INVITEE_REWARD = Decimal("0.5")  # 被邀請人獎勵
+    
+    # 多級返佣比例
+    LEVEL1_COMMISSION = Decimal("0.05")  # 一級返佣 5%
+    LEVEL2_COMMISSION = Decimal("0.02")  # 二級返佣 2%
+    
+    # 邀請里程碑獎勵
+    MILESTONES = {
+        5: Decimal("5.0"),    # 邀請 5 人獎勵
+        10: Decimal("15.0"),  # 邀請 10 人獎勵
+        25: Decimal("50.0"),  # 邀請 25 人獎勵
+        50: Decimal("150.0"), # 邀請 50 人獎勵
+        100: Decimal("500.0"), # 邀請 100 人獎勵
+    }
+    
+    # 邀請活動開關
+    ENABLED = True  # 是否啟用邀請獎勵
+
+
 class CacheConstants:
     """緩存相關常量"""
     USER_CACHE_TTL = 300  # 用戶緩存 TTL（秒，5分鐘）

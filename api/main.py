@@ -18,6 +18,32 @@ from shared.database.connection import init_db
 from api.routers import auth, users, redpackets, wallet, checkin, chats, messages, exchange
 from api.routers import admin_telegram, admin_reports, admin_auth, admin_dashboard, admin_users, admin_redpackets, admin_transactions, admin_checkin, admin_invite
 
+# 安全中心路由
+try:
+    from api.routers import admin_security
+    HAS_ADMIN_SECURITY = True
+except ImportError:
+    HAS_ADMIN_SECURITY = False
+
+# 可選導入（某些模塊可能不存在）
+try:
+    from api.routers import ai_api
+    HAS_AI_API = True
+except ImportError:
+    HAS_AI_API = False
+
+try:
+    from api.routers.v2 import auth as auth_v2, security as security_v2
+    HAS_V2_API = True
+except ImportError:
+    HAS_V2_API = False
+
+try:
+    from api.middleware.anti_sybil import AntiSybilMiddleware
+    HAS_ANTI_SYBIL = True
+except ImportError:
+    HAS_ANTI_SYBIL = False
+
 settings = get_settings()
 
 # 配置日誌
@@ -67,6 +93,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 反 Sybil 中間件（保護搶紅包等敏感操作）
+if HAS_ANTI_SYBIL:
+    app.add_middleware(AntiSybilMiddleware)
+
 
 # 全局異常處理
 @app.exception_handler(Exception)
@@ -105,6 +135,19 @@ app.include_router(admin_redpackets.router, tags=["管理后台-红包管理"])
 app.include_router(admin_transactions.router, tags=["管理后台-交易管理"])
 app.include_router(admin_checkin.router, tags=["管理后台-签到管理"])
 app.include_router(admin_invite.router, tags=["管理后台-邀请管理"])
+
+# AI 系統對接 API
+if HAS_AI_API:
+    app.include_router(ai_api.router, tags=["AI 系統對接"])
+
+# v2 安全與合規 API
+if HAS_V2_API:
+    app.include_router(auth_v2.router, tags=["認證-v2"])
+    app.include_router(security_v2.router, tags=["安全-v2"])
+
+# 管理后台安全中心
+if HAS_ADMIN_SECURITY:
+    app.include_router(admin_security.router, tags=["管理后台-安全中心"])
 
 
 if __name__ == "__main__":

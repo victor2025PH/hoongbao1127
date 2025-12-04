@@ -7,9 +7,11 @@ from loguru import logger
 
 from shared.config.settings import get_settings
 from shared.database.connection import get_db
-from shared.database.models import User
+from shared.database.models import User, Transaction, CurrencyType
 from bot.utils.user_helpers import get_or_create_user
 from bot.utils.logging_helpers import log_user_action
+from bot.constants import InviteConstants
+from decimal import Decimal
 
 settings = get_settings()
 
@@ -49,6 +51,63 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if inviter and inviter.tg_id != user.id:
                 db_user_refreshed.invited_by = inviter.tg_id
                 inviter.invite_count = (inviter.invite_count or 0) + 1
+                
+                # 發放邀請獎勵
+                if InviteConstants.ENABLED:
+                    # 邀請人獎勵
+                    inviter_reward = InviteConstants.INVITER_REWARD
+                    inviter.balance_usdt = (inviter.balance_usdt or Decimal(0)) + inviter_reward
+                    inviter.invite_earnings = (inviter.invite_earnings or Decimal(0)) + inviter_reward
+                    
+                    # 被邀請人獎勵
+                    invitee_reward = InviteConstants.INVITEE_REWARD
+                    db_user_refreshed.balance_usdt = (db_user_refreshed.balance_usdt or Decimal(0)) + invitee_reward
+                    
+                    # 記錄交易
+                    inviter_tx = Transaction(
+                        user_id=inviter.id,
+                        type="invite_bonus",
+                        currency=CurrencyType.USDT,
+                        amount=inviter_reward,
+                        balance_before=inviter.balance_usdt - inviter_reward,
+                        balance_after=inviter.balance_usdt,
+                        note=f"邀請獎勵 - 邀請用戶 {user.id}",
+                        status="completed"
+                    )
+                    invitee_tx = Transaction(
+                        user_id=db_user_refreshed.id,
+                        type="invite_bonus",
+                        currency=CurrencyType.USDT,
+                        amount=invitee_reward,
+                        balance_before=Decimal(0),
+                        balance_after=invitee_reward,
+                        note=f"新用戶獎勵 - 由 {inviter.tg_id} 邀請",
+                        status="completed"
+                    )
+                    db.add(inviter_tx)
+                    db.add(invitee_tx)
+                    
+                    # 檢查里程碑獎勵
+                    new_invite_count = inviter.invite_count
+                    if new_invite_count in InviteConstants.MILESTONES:
+                        milestone_reward = InviteConstants.MILESTONES[new_invite_count]
+                        inviter.balance_usdt = inviter.balance_usdt + milestone_reward
+                        inviter.invite_earnings = inviter.invite_earnings + milestone_reward
+                        milestone_tx = Transaction(
+                            user_id=inviter.id,
+                            type="invite_milestone",
+                            currency=CurrencyType.USDT,
+                            amount=milestone_reward,
+                            balance_before=inviter.balance_usdt - milestone_reward,
+                            balance_after=inviter.balance_usdt,
+                            note=f"邀請里程碑獎勵 - 達成 {new_invite_count} 人",
+                            status="completed"
+                        )
+                        db.add(milestone_tx)
+                        logger.info(f"User {inviter.tg_id} reached invite milestone {new_invite_count}, reward: {milestone_reward}")
+                    
+                    logger.info(f"Invite rewards: inviter {inviter.tg_id} +{inviter_reward}, invitee {user.id} +{invitee_reward}")
+                
                 db.commit()
                 # 清除緩存
                 from bot.utils.cache import UserCache
@@ -62,9 +121,24 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         log_user_action(user.id, "start", {"is_new": is_new_user})
     logger.info(f"User {user.id} ({user.username}) sent /start command")
     
-    # 構建歡迎消息
-    welcome_text = f"""
-🧧 *歡迎來到 Lucky Red 搶紅包！*
+    # 检查用户是否已设置交互模式
+    with get_db() as db:
+        db_user_refreshed = db.query(User).filter(User.tg_id == user.id).first()
+        if not db_user_refreshed:
+            logger.error(f"User {user.id} not found after creation")
+            await update.message.reply_text("發生錯誤，請稍後再試")
+            return
+        
+        # 如果是新用户或未设置模式，显示初始设置（语言 + 键盘模式）
+        if not db_user_refreshed.interaction_mode or db_user_refreshed.interaction_mode == "auto":
+            from bot.handlers.initial_setup import show_initial_setup
+            await show_initial_setup(update, context)
+            return
+        
+        # 使用i18n获取欢迎消息（根据用户语言环境）
+        from bot.utils.i18n import t
+        welcome_text = f"""
+🧧 *{t('welcome', user=db_user_refreshed)}*
 
 Hi {user.first_name}！
 
@@ -76,43 +150,100 @@ Hi {user.first_name}！
 
 快來試試吧！👇
 """
-    
-    # 使用主回覆鍵盤和內聯鍵盤
-    from bot.keyboards import get_main_menu
-    from bot.keyboards.reply_keyboards import get_main_reply_keyboard
-    
-    try:
-        # 先設置回覆鍵盤（在輸入框下方）- 這會一直顯示
-        reply_keyboard = get_main_reply_keyboard()
-        logger.info(f"Preparing to send reply keyboard to user {user.id}")
-        logger.debug(f"Reply keyboard: {reply_keyboard}")
         
-        result = await update.message.reply_text(
-            welcome_text,
-            parse_mode="Markdown",
-            reply_markup=reply_keyboard,  # 回覆鍵盤（在輸入框下方，一直顯示）
-        )
-        logger.info(f"✓ Reply keyboard sent successfully to user {user.id}, message_id: {result.message_id}")
-    except Exception as e:
-        logger.error(f"✗ Error sending reply keyboard to user {user.id}: {e}", exc_info=True)
-        # 如果回覆鍵盤失敗，至少發送歡迎消息
+        # 获取用户的有效模式
+        from bot.utils.mode_helper import get_effective_mode
+        from bot.keyboards.unified import get_unified_keyboard
+        
+        effective_mode = get_effective_mode(db_user_refreshed, update.effective_chat.type)
+        chat_type = update.effective_chat.type
+        
+        # 在 /start 后，同时显示内联按钮和底部键盘，让用户选择
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+        
+        # 创建底部键盘（主菜单）
+        reply_keyboard = [
+            [
+                KeyboardButton("💰 錢包"),
+                KeyboardButton("🧧 紅包"),
+            ],
+            [
+                KeyboardButton("📈 賺取"),
+                KeyboardButton("🎮 遊戲"),
+            ],
+            [
+                KeyboardButton("👤 我的"),
+            ],
+        ]
+        
+        # 创建内联按钮（主菜单 + 切换模式）
+        inline_keyboard = [
+            [
+                InlineKeyboardButton("💰 錢包", callback_data="menu:wallet"),
+                InlineKeyboardButton("🧧 紅包", callback_data="menu:packets"),
+            ],
+            [
+                InlineKeyboardButton("📈 賺取", callback_data="menu:earn"),
+                InlineKeyboardButton("🎮 遊戲", callback_data="menu:game"),
+            ],
+            [
+                InlineKeyboardButton("👤 我的", callback_data="menu:profile"),
+            ],
+            [
+                InlineKeyboardButton("🔄 切換模式", callback_data="switch_mode"),
+            ],
+        ]
+        
         try:
-            await update.message.reply_text(
+            # 同时发送欢迎消息（带内联按钮）和底部键盘
+            result = await update.message.reply_text(
                 welcome_text,
                 parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard),
             )
-            logger.info(f"✓ Fallback welcome message sent to user {user.id}")
-        except Exception as e2:
-            logger.error(f"✗ Failed to send fallback message: {e2}", exc_info=True)
+            logger.info(f"✓ Inline keyboard sent successfully to user {user.id}")
+            
+            # 发送底部键盘
+            await update.message.reply_text(
+                "💡 您可以使用內聯按鈕或底部鍵盤進行操作：",
+                reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True),
+            )
+            logger.info(f"✓ Reply keyboard sent successfully to user {user.id}")
+        except Exception as e:
+            logger.error(f"✗ Error sending keyboard to user {user.id}: {e}", exc_info=True)
+            await update.message.reply_text(welcome_text, parse_mode="Markdown")
+
+
+async def open_miniapp_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """處理打開 miniapp 的命令"""
+    from shared.config.settings import get_settings
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
     
-    # 然後發送內聯鍵盤（在消息下方，可點擊）
-    try:
-        await update.message.reply_text(
-            "💡 點擊下方按鈕或使用輸入框下方的菜單：",
-            reply_markup=get_main_menu(),  # 內聯鍵盤（在消息下方）
+    settings = get_settings()
+    command = update.message.text.split()[0].replace("/", "").lower()
+    
+    # 根據命令映射到對應的 miniapp 頁面
+    url_map = {
+        "wallet": f"{settings.MINIAPP_URL}/wallet",
+        "packets": f"{settings.MINIAPP_URL}/packets",
+        "earn": f"{settings.MINIAPP_URL}/earn",
+        "game": f"{settings.MINIAPP_URL}/game",
+        "profile": f"{settings.MINIAPP_URL}/profile",
+    }
+    
+    url = url_map.get(command, settings.MINIAPP_URL)
+    
+    keyboard = [[
+        InlineKeyboardButton(
+            "🚀 打開應用",
+            web_app=WebAppInfo(url=url)
         )
-    except Exception as e:
-        logger.error(f"Error sending inline keyboard: {e}", exc_info=True)
+    ]]
+    
+    await update.message.reply_text(
+        f"點擊按鈕打開 {command} 頁面：",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -122,7 +253,11 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 *基本命令：*
 /start - 開始使用
-/wallet - 查看錢包餘額
+/wallet - 打開錢包
+/packets - 打開紅包
+/earn - 打開賺取
+/game - 打開遊戲
+/profile - 打開我的
 /send - 發送紅包
 /checkin - 每日簽到
 /invite - 邀請好友

@@ -91,6 +91,10 @@ class Settings(BaseSettings):
     
     # 日誌
     LOG_LEVEL: str = "INFO"
+    
+    # AI 系統對接
+    AI_API_KEY: str = ""  # AI 系統 API 金鑰（留空則開發模式允許任意金鑰）
+    AI_API_RATE_LIMIT: int = 100  # 每分鐘請求限制
 
 
 @lru_cache()

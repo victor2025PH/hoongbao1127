@@ -72,6 +72,24 @@ async def get_user_balance(
     )
 
 
+@router.get("/me", response_model=UserProfile)
+async def get_my_profile(
+    db: AsyncSession = Depends(get_db_session),
+    tg_id: Optional[int] = Depends(get_tg_id_from_header)
+):
+    """獲取當前用戶資料（從 initData 中獲取 tg_id）"""
+    if not tg_id:
+        raise HTTPException(status_code=401, detail="Telegram user ID is required")
+    
+    result = await db.execute(select(User).where(User.tg_id == tg_id))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return user
+
+
 @router.get("/me/balance", response_model=UserBalance)
 async def get_my_balance(
     db: AsyncSession = Depends(get_db_session),
@@ -188,7 +206,7 @@ async def list_users(
     }
 
 
-@router.get("/{user_id}")
+@router.get("/detail/{user_id}")
 async def get_user_detail(
     user_id: int,
     db: AsyncSession = Depends(get_db_session)

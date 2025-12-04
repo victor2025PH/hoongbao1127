@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Card, Row, Col, Statistic, Spin, Switch, Button, Select, Empty } from 'antd'
-import { UserOutlined, GiftOutlined, DollarOutlined, ReloadOutlined, CalendarOutlined, UserAddOutlined } from '@ant-design/icons'
+import { Card, Row, Col, Statistic, Spin, Switch, Button, Select, Empty, Divider, Alert } from 'antd'
+import { UserOutlined, GiftOutlined, DollarOutlined, ReloadOutlined, CalendarOutlined, UserAddOutlined, SafetyOutlined, StopOutlined, WarningOutlined, MobileOutlined } from '@ant-design/icons'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { dashboardApi } from '../utils/api'
+import { dashboardApi, securityApi } from '../utils/api'
 import dayjs from 'dayjs'
 
 const { Option } = Select
@@ -39,10 +39,24 @@ export default function Dashboard() {
     },
   })
 
+  // 安全統計
+  const { data: securityStats, refetch: refetchSecurity } = useQuery({
+    queryKey: ['security-stats-overview'],
+    queryFn: async () => {
+      try {
+        const response = await securityApi.getStats()
+        return response.data.data
+      } catch {
+        return null
+      }
+    },
+  })
+
   const handleRefresh = () => {
     refetchStats()
     refetchTrends()
     refetchDistribution()
+    refetchSecurity()
   }
 
   if (isLoading) {
@@ -142,6 +156,72 @@ export default function Dashboard() {
           </Card>
         </Col>
       </Row>
+
+      {/* 安全統計 */}
+      {securityStats && (
+        <>
+          <Divider orientation="left">
+            <SafetyOutlined style={{ marginRight: 8 }} />
+            安全監控
+          </Divider>
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            <Col span={6}>
+              <Card size="small">
+                <Statistic
+                  title="今日攔截"
+                  value={securityStats.today_blocked || 0}
+                  prefix={<StopOutlined />}
+                  valueStyle={{ color: '#ff4d4f', fontSize: 20 }}
+                />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small">
+                <Statistic
+                  title="可疑帳號"
+                  value={securityStats.suspicious_users || 0}
+                  prefix={<WarningOutlined />}
+                  valueStyle={{ color: '#faad14', fontSize: 20 }}
+                />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small">
+                <Statistic
+                  title="活躍設備"
+                  value={securityStats.active_devices || 0}
+                  prefix={<MobileOutlined />}
+                  valueStyle={{ color: '#1890ff', fontSize: 20 }}
+                />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small">
+                <Statistic
+                  title="待處理警報"
+                  value={securityStats.pending_alerts || 0}
+                  prefix={<SafetyOutlined />}
+                  valueStyle={{ color: securityStats.pending_alerts > 10 ? '#ff4d4f' : '#52c41a', fontSize: 20 }}
+                />
+              </Card>
+            </Col>
+          </Row>
+          {securityStats.pending_alerts > 10 && (
+            <Alert
+              message="安全警報"
+              description={`有 ${securityStats.pending_alerts} 條警報待處理，請前往安全中心查看。`}
+              type="warning"
+              showIcon
+              action={
+                <Button size="small" type="primary" href="/security/alerts">
+                  查看警報
+                </Button>
+              }
+              style={{ marginBottom: 16 }}
+            />
+          )}
+        </>
+      )}
       <Row gutter={16} style={{ marginTop: 16 }}>
         <Col span={12}>
           <Card>

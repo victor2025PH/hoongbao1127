@@ -5,6 +5,7 @@ import TopToolbar from './components/TopToolbar'
 import Loading from './components/Loading'
 import AlertModal from './components/AlertModal'
 import ConfirmModal from './components/ConfirmModal'
+import ErrorBoundary from './components/ErrorBoundary'
 import { setAlertCallback, setConfirmCallback } from './utils/telegram'
 import { notificationManager } from './utils/notification'
 
@@ -121,21 +122,23 @@ export default function App() {
       <TopToolbar />
       
       <main className="flex-1 overflow-hidden">
-        <Suspense fallback={<Loading />}>
-          <Routes>
-            <Route path="/" element={<WalletPage />} />
-            <Route path="/packets" element={<PacketsPage />} />
-            <Route path="/send" element={<SendRedPacket />} />
-            <Route path="/earn" element={<EarnPage />} />
-            <Route path="/game" element={<GamePage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/recharge" element={<Recharge />} />
-            <Route path="/withdraw" element={<Withdraw />} />
-            <Route path="/exchange" element={<ExchangePage />} />
-            <Route path="/lucky-wheel" element={<LuckyWheelPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<Loading />}>
+            <Routes>
+              <Route path="/" element={<WalletPage />} />
+              <Route path="/packets" element={<PacketsPage />} />
+              <Route path="/send" element={<SendRedPacket />} />
+              <Route path="/earn" element={<EarnPage />} />
+              <Route path="/game" element={<GamePage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/recharge" element={<Recharge />} />
+              <Route path="/withdraw" element={<Withdraw />} />
+              <Route path="/exchange" element={<ExchangePage />} />
+              <Route path="/lucky-wheel" element={<LuckyWheelPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </main>
       
       <BottomNav />

@@ -96,7 +96,8 @@ async def show_profile_stats(query, db_user):
     """顯示統計數據"""
     # 在會話內重新查詢用戶以確保數據最新
     from shared.database.connection import get_db
-    from shared.database.models import User
+    from shared.database.models import User, RedPacket, RedPacketClaim
+    from sqlalchemy import func
     
     with get_db() as db:
         user = db.query(User).filter(User.tg_id == db_user.tg_id).first()
@@ -104,14 +105,23 @@ async def show_profile_stats(query, db_user):
             await query.edit_message_text("發生錯誤，請稍後再試")
             return
         
-        sent_count = user.sent_packets_count or 0
-        claimed_count = user.claimed_packets_count or 0
-        total_sent = float(user.total_sent_amount or 0)
-        total_claimed = float(user.total_claimed_amount or 0)
+        # 使用关系查询统计（在会话内）
+        sent_count = db.query(RedPacket).filter(RedPacket.sender_id == user.id).count()
+        claimed_count = db.query(RedPacketClaim).filter(RedPacketClaim.user_id == user.id).count()
+        
+        # 计算总发送和总领取金额
+        total_sent_result = db.query(func.sum(RedPacket.total_amount)).filter(RedPacket.sender_id == user.id).scalar()
+        total_sent = float(total_sent_result or 0)
+        
+        total_claimed_result = db.query(func.sum(RedPacketClaim.amount)).filter(RedPacketClaim.user_id == user.id).scalar()
+        total_claimed = float(total_claimed_result or 0)
+        
         invite_count = user.invite_count or 0
         invite_earnings = float(user.invite_earnings or 0)
-        consecutive_days = user.consecutive_checkin_days or 0
-        total_checkin = user.total_checkin_count or 0
+        consecutive_days = user.checkin_streak or 0  # 使用 checkin_streak 代替 consecutive_checkin_days
+        
+        # 计算总签到次数（如果有签到记录表，否则使用 checkin_streak）
+        total_checkin = user.checkin_streak or 0
     
     text = f"""
 📈 *統計數據*

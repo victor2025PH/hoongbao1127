@@ -12,6 +12,12 @@ import {
   LogoutOutlined,
   SunOutlined,
   MoonOutlined,
+  SafetyOutlined,
+  WarningOutlined,
+  MobileOutlined,
+  GlobalOutlined,
+  BellOutlined,
+  WalletOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../../stores/authStore'
 import { useThemeStore } from '../../stores/themeStore'
@@ -62,6 +68,43 @@ const menuItems = [
     key: '/reports',
     icon: <FileTextOutlined />,
     label: '報表管理',
+  },
+  {
+    key: 'security',
+    icon: <SafetyOutlined />,
+    label: '安全中心',
+    children: [
+      {
+        key: '/security',
+        icon: <SafetyOutlined />,
+        label: '安全總覽',
+      },
+      {
+        key: '/security/risk',
+        icon: <WarningOutlined />,
+        label: '風險監控',
+      },
+      {
+        key: '/security/devices',
+        icon: <MobileOutlined />,
+        label: '設備管理',
+      },
+      {
+        key: '/security/ip',
+        icon: <GlobalOutlined />,
+        label: 'IP 監控',
+      },
+      {
+        key: '/security/alerts',
+        icon: <BellOutlined />,
+        label: '警報日誌',
+      },
+      {
+        key: '/security/liquidity',
+        icon: <WalletOutlined />,
+        label: '流動性管理',
+      },
+    ],
   },
 ]
 

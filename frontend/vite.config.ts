@@ -10,7 +10,10 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0', // 允許外部訪問
     port: 3001,
+    strictPort: false, // 如果端口被佔用，嘗試其他端口
+    open: false, // 不自動打開瀏覽器
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

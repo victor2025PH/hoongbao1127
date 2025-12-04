@@ -381,6 +381,14 @@ async def claim_red_packet(
                 is_luckiest = True
             await db.commit()
     
+    # 紅包領完後發送群組通知
+    if is_completed and packet.chat_id:
+        try:
+            from api.services.group_notification_service import notify_packet_result
+            await notify_packet_result(db, packet.id)
+        except Exception as e:
+            logger.error(f"Failed to send group notification: {e}")
+    
     # 發送消息通知（異步，不阻塞響應）
     try:
         from api.services.message_service import MessageService

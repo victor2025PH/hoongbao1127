@@ -22,6 +22,29 @@ class CurrencyType(str, enum.Enum):
     POINTS = "points"
 
 
+class CurrencySource(str, enum.Enum):
+    """資金來源類型 - 用於流動性管理"""
+    REAL_CRYPTO = "real_crypto"      # 真實加密貨幣充值
+    STARS_CREDIT = "stars_credit"    # Telegram Stars 兌換
+    BONUS = "bonus"                  # 獎勵/活動
+    REFERRAL = "referral"            # 推薦獎勵
+
+
+class WithdrawableStatus(str, enum.Enum):
+    """可提現狀態"""
+    LOCKED = "locked"                # 鎖定中
+    COOLDOWN = "cooldown"            # 冷卻期
+    WITHDRAWABLE = "withdrawable"    # 可提現
+
+
+class RiskLevel(str, enum.Enum):
+    """風險等級"""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
 class RedPacketType(str, enum.Enum):
     """紅包類型"""
     RANDOM = "random"      # 拼手氣
@@ -71,6 +94,11 @@ class User(Base):
     # 狀態
     is_banned = Column(Boolean, default=False)
     is_admin = Column(Boolean, default=False)
+    
+    # 交互模式偏好
+    interaction_mode = Column(String(20), default="auto")  # "keyboard", "inline", "miniapp", "auto"
+    last_interaction_mode = Column(String(20), default="keyboard")  # 上次使用的模式
+    seamless_switch_enabled = Column(Boolean, default=True)  # 是否启用无缝切换
     
     # 時間戳
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -479,5 +507,244 @@ class Report(Base):
     __table_args__ = (
         Index("ix_reports_status", "status"),
         Index("ix_reports_type", "report_type"),
+    )
+
+
+# ==================== 安全與合規層相關表 ====================
+
+class LedgerCategory(str, enum.Enum):
+    """帳本分類"""
+    DEPOSIT = "deposit"              # 充值
+    WITHDRAW = "withdraw"            # 提現
+    SEND_PACKET = "send_packet"      # 發送紅包
+    CLAIM_PACKET = "claim_packet"    # 領取紅包
+    REFUND = "refund"                # 退款
+    STARS_CONVERSION = "stars_conversion"  # Stars 兌換
+    FIAT_DEPOSIT = "fiat_deposit"    # 法幣充值
+    REFERRAL_BONUS = "referral_bonus"  # 推薦獎勵
+    GAME_WIN = "game_win"            # 遊戲獲勝
+    GAME_LOSS = "game_loss"          # 遊戲輸錢
+    FEE = "fee"                      # 手續費
+
+
+class LedgerEntry(Base):
+    """
+    帳本條目表 - 複式記帳系統
+    用於追蹤所有資金流動，包含資金來源和可提現狀態
+    """
+    __tablename__ = "ledger_entries"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), unique=True, nullable=False, index=True)
+    
+    # 用戶關聯
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # 交易信息
+    currency = Column(Enum(CurrencyType), nullable=False)
+    amount = Column(Numeric(20, 8), nullable=False)  # 正數=貸記，負數=借記
+    balance_after = Column(Numeric(20, 8), nullable=False)  # 交易後餘額快照
+    category = Column(Enum(LedgerCategory), nullable=False)
+    
+    # 資金來源追蹤 - 流動性管理
+    currency_source = Column(Enum(CurrencySource), default=CurrencySource.REAL_CRYPTO)
+    withdrawable_status = Column(Enum(WithdrawableStatus), default=WithdrawableStatus.WITHDRAWABLE)
+    cooldown_until = Column(DateTime, nullable=True)  # 冷卻期結束時間
+    
+    # 遊戲流水要求
+    turnover_required = Column(Numeric(20, 8), default=0)  # 需要的流水
+    turnover_completed = Column(Numeric(20, 8), default=0)  # 已完成流水
+    
+    # 關聯引用
+    ref_type = Column(String(32), nullable=True)  # red_packet, transaction, etc.
+    ref_id = Column(String(64), nullable=True)
+    
+    # 配對交易（複式記帳的另一端）
+    paired_entry_id = Column(Integer, ForeignKey("ledger_entries.id"), nullable=True)
+    
+    # 備註和元數據
+    note = Column(Text, nullable=True)
+    meta_data = Column(JSON, nullable=True)
+    
+    # 時間戳
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        Index("ix_ledger_user_currency", "user_id", "currency"),
+        Index("ix_ledger_user_created", "user_id", "created_at"),
+        Index("ix_ledger_category", "category"),
+        Index("ix_ledger_ref", "ref_type", "ref_id"),
+        Index("ix_ledger_source_status", "currency_source", "withdrawable_status"),
+        Index("ix_ledger_cooldown", "cooldown_until"),
+    )
+
+
+class MagicLinkToken(Base):
+    """
+    Magic Link 令牌表
+    用於無密碼登入 H5/Web 版本
+    """
+    __tablename__ = "magic_link_tokens"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    tg_id = Column(BigInteger, nullable=False, index=True)  # Telegram 用戶 ID
+    token = Column(String(64), unique=True, nullable=False, index=True)
+    
+    # 安全性
+    ip_address = Column(String(64), nullable=True)
+    user_agent = Column(String(512), nullable=True)
+    
+    # 狀態
+    is_used = Column(Boolean, default=False)
+    used_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        Index("ix_magic_link_token", "token"),
+        Index("ix_magic_link_tg_id", "tg_id"),
+        Index("ix_magic_link_expires", "expires_at"),
+    )
+
+
+class DeviceFingerprint(Base):
+    """
+    設備指紋表
+    用於反 Sybil 攻擊檢測
+    """
+    __tablename__ = "device_fingerprints"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    fingerprint_id = Column(String(64), nullable=False, index=True)
+    
+    # 設備信息
+    device_info = Column(JSON, nullable=True)  # 設備類型、操作系統等
+    browser_info = Column(JSON, nullable=True)  # 瀏覽器信息
+    
+    # 風險評估
+    confidence_score = Column(Numeric(5, 4), nullable=True)  # 0-1
+    risk_level = Column(Enum(RiskLevel), default=RiskLevel.LOW)
+    
+    # 追蹤
+    first_seen = Column(DateTime, default=datetime.utcnow)
+    last_seen = Column(DateTime, default=datetime.utcnow)
+    request_count = Column(Integer, default=0)
+    
+    __table_args__ = (
+        Index("ix_fingerprint_id", "fingerprint_id"),
+        Index("ix_fingerprint_user", "user_id"),
+        Index("ix_fingerprint_risk", "risk_level"),
+    )
+
+
+class IPSession(Base):
+    """
+    IP 會話追蹤表
+    用於檢測同一 IP 的多會話攻擊
+    """
+    __tablename__ = "ip_sessions"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ip_address = Column(String(64), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # 會話信息
+    session_id = Column(String(64), nullable=True)
+    session_start = Column(DateTime, default=datetime.utcnow)
+    last_activity = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+    
+    # 活動統計
+    packet_claims = Column(Integer, default=0)
+    suspicious_actions = Column(Integer, default=0)
+    
+    # 地理信息
+    country_code = Column(String(2), nullable=True)
+    city = Column(String(128), nullable=True)
+    
+    __table_args__ = (
+        Index("ix_ip_session_ip", "ip_address"),
+        Index("ix_ip_session_user", "user_id"),
+        Index("ix_ip_session_active", "is_active"),
+        Index("ix_ip_session_activity", "last_activity"),
+    )
+
+
+class SybilAlert(Base):
+    """
+    Sybil 攻擊警報表
+    記錄所有被阻止的可疑行為
+    """
+    __tablename__ = "sybil_alerts"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    
+    # 關聯信息
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    ip_address = Column(String(64), nullable=True)
+    fingerprint_id = Column(String(64), nullable=True)
+    
+    # 警報類型
+    alert_type = Column(String(32), nullable=False)  # new_account, ip_limit, rate_limit, fingerprint
+    alert_code = Column(String(64), nullable=False)
+    
+    # 詳情
+    message = Column(Text, nullable=True)
+    request_path = Column(String(256), nullable=True)
+    request_method = Column(String(16), nullable=True)
+    meta_data = Column(JSON, nullable=True)  # 包含完整請求信息
+    
+    # 處理狀態
+    is_reviewed = Column(Boolean, default=False)
+    reviewed_by = Column(Integer, ForeignKey("admin_users.id"), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    action_taken = Column(String(64), nullable=True)  # blocked, warned, banned, false_positive
+    
+    # 時間戳
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    
+    __table_args__ = (
+        Index("ix_sybil_alert_type", "alert_type"),
+        Index("ix_sybil_alert_user", "user_id"),
+        Index("ix_sybil_alert_ip", "ip_address"),
+        Index("ix_sybil_alert_reviewed", "is_reviewed"),
+    )
+
+
+class UserBalance(Base):
+    """
+    用戶餘額表 - 快取層
+    按資金來源分類的餘額匯總
+    """
+    __tablename__ = "user_balances"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    currency = Column(Enum(CurrencyType), nullable=False)
+    
+    # 總餘額
+    total_balance = Column(Numeric(20, 8), default=0)
+    
+    # 按來源分類的餘額
+    balance_real_crypto = Column(Numeric(20, 8), default=0)  # 真實加密貨幣
+    balance_stars_credit = Column(Numeric(20, 8), default=0)  # Stars 兌換
+    balance_bonus = Column(Numeric(20, 8), default=0)  # 獎勵
+    balance_referral = Column(Numeric(20, 8), default=0)  # 推薦
+    
+    # 可提現餘額
+    withdrawable_balance = Column(Numeric(20, 8), default=0)
+    locked_balance = Column(Numeric(20, 8), default=0)  # 冷卻中
+    
+    # 流水統計
+    total_turnover = Column(Numeric(20, 8), default=0)  # 總流水
+    pending_turnover = Column(Numeric(20, 8), default=0)  # 待完成流水
+    
+    # 更新時間
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        Index("ix_user_balance_user_currency", "user_id", "currency", unique=True),
     )
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown, X, Users, Wallet, Gift, DollarSign, MessageSquare, Info, Bomb, Search, User, CheckCircle, XCircle, Bot, RefreshCw, Trash2 } from 'lucide-react'
 import { useTranslation } from '../providers/I18nProvider'
+import TelegramStar from '../components/TelegramStar'
 import { getUserChats, sendRedPacket, searchChats, searchUsers, checkUserInChat, type ChatInfo } from '../utils/api'
 import { haptic, showAlert, showConfirm, getTelegramUser } from '../utils/telegram'
 
@@ -14,6 +15,9 @@ export default function SendRedPacket() {
   const [selectedChat, setSelectedChat] = useState<ChatInfo | null>(null)
   const [showChatModal, setShowChatModal] = useState(false)
   const [showRulesModal, setShowRulesModal] = useState(false)
+  const [dontShowAgain, setDontShowAgain] = useState(false)
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false)
+  const [selectedCurrencyInfo, setSelectedCurrencyInfo] = useState<'USDT' | 'TON' | 'Stars' | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   
   // 獲取 Telegram 用戶 ID（用於搜索）
@@ -36,6 +40,21 @@ export default function SendRedPacket() {
       }
     }
   }, [telegramUser, storedTestTgId])
+
+  // 每次進入頁面時檢查是否需要顯示規則彈窗
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const dontShowRules = localStorage.getItem('dont_show_game_rules')
+      if (!dontShowRules) {
+        // 延遲一點顯示，讓頁面先加載完成
+        const timer = setTimeout(() => {
+          setShowRulesModal(true)
+        }, 500)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [])
+
   const [amount, setAmount] = useState('')
   const [quantity, setQuantity] = useState('1')
   const [currency, setCurrency] = useState('USDT')
@@ -409,20 +428,38 @@ export default function SendRedPacket() {
           </label>
           <div className="flex gap-2">
             {['USDT', 'TON', 'Stars'].map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCurrency(c)}
-                className={`flex-1 py-3 rounded-xl border transition-colors ${
-                  currency === c
-                    ? 'bg-brand-red border-brand-red text-white'
-                    : 'bg-brand-darker border-white/5 text-gray-400'
-                }`}
-              >
-                {c}
-              </button>
+              <div key={c} className="flex-1 relative group">
+                <button
+                  type="button"
+                  onClick={() => setCurrency(c)}
+                  className={`w-full py-3 rounded-xl border transition-colors ${
+                    currency === c
+                      ? 'bg-brand-red border-brand-red text-white'
+                      : 'bg-brand-darker border-white/5 text-gray-400'
+                  }`}
+                >
+                  {c}
+                </button>
+                {/* 點擊幣種名稱查看獲取方式 */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedCurrencyInfo(c as 'USDT' | 'TON' | 'Stars')
+                    setShowCurrencyModal(true)
+                  }}
+                  className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-xl cursor-pointer"
+                  title="點擊查看獲取方式"
+                >
+                  <Info size={16} className="text-white" />
+                </button>
+                <span className="absolute top-1 right-1 text-xs opacity-50 group-hover:opacity-100 pointer-events-none">ℹ️</span>
+              </div>
             ))}
           </div>
+          <p className="text-gray-400 text-xs mt-2">
+            💡 提示：懸停幣種按鈕並點擊 ℹ️ 圖標可查看獲取方式
+          </p>
         </div>
 
         {/* 紅包類型 */}
@@ -435,10 +472,16 @@ export default function SendRedPacket() {
             <button
               type="button"
               onClick={() => setShowRulesModal(true)}
-              className="text-brand-red text-sm flex items-center gap-1 hover:opacity-80"
+              className="text-brand-red text-sm flex items-center gap-1 hover:opacity-80 relative group"
             >
-              <Info size={14} />
-              {t('view_rules')}
+              <Info size={14} className="relative z-10" />
+              <span className="relative z-10 font-semibold flex items-center gap-1">
+                <TelegramStar size={14} withSpray={true} />
+                {t('game_rules')}
+                <TelegramStar size={14} withSpray={true} />
+              </span>
+              {/* 發光特效 */}
+              <span className="absolute inset-0 bg-gradient-to-r from-red-500/20 via-orange-500/20 to-yellow-500/20 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
             </button>
           </div>
           <div className="flex gap-2">
@@ -807,18 +850,27 @@ export default function SendRedPacket() {
 
       {/* 遊戲規則說明彈窗 */}
       {showRulesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowRulesModal(false)}>
-          <div className="bg-brand-darker rounded-2xl p-6 max-w-md w-full border border-white/10 shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 pb-24" onClick={() => setShowRulesModal(false)}>
+          <div className="bg-brand-darker rounded-2xl p-6 max-w-md w-full border border-white/10 shadow-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             {/* 標題 */}
             <div className="flex items-center justify-between mb-4 shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-brand-red flex items-center justify-center">
                   <Info size={16} className="text-white" />
                 </div>
-                <h3 className="text-white text-lg font-bold">遊戲規則</h3>
+                <h3 className="text-white text-lg font-bold flex items-center gap-2">
+                  <TelegramStar size={18} withSpray={true} />
+                  {t('game_rules_title')}
+                  <TelegramStar size={18} withSpray={true} />
+                </h3>
               </div>
               <button
-                onClick={() => setShowRulesModal(false)}
+                onClick={() => {
+                  if (dontShowAgain) {
+                    localStorage.setItem('dont_show_game_rules', 'true')
+                  }
+                  setShowRulesModal(false)
+                }}
                 className="p-1 hover:bg-white/5 rounded-lg transition-colors"
               >
                 <X size={20} className="text-white" />
@@ -827,59 +879,254 @@ export default function SendRedPacket() {
 
             {/* 規則內容 */}
             <div className="space-y-4 overflow-y-auto flex-1">
+              {/* 支持幣種 */}
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Gift size={20} className="text-purple-400" />
+                  <h4 className="text-white font-semibold">{t('game_rules_supported_currencies')}</h4>
+                </div>
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  {t('game_rules_supported_currencies_desc')
+                    .replace('{usdt}', '<strong class="text-yellow-400">USDT</strong>')
+                    .replace('{ton}', '<strong class="text-blue-400">TON</strong>')
+                    .replace('{stars}', '<strong class="text-purple-400">Stars</strong>')
+                    .split(/(<strong[^>]*>.*?<\/strong>)/g)
+                    .map((part, i) => {
+                      if (part.startsWith('<strong')) {
+                        return <span key={i} dangerouslySetInnerHTML={{ __html: part }} />
+                      }
+                      return <span key={i}>{part}</span>
+                    })}
+                </p>
+                <p className="text-gray-400 text-xs mt-2">
+                  {t('currency_get_method_hint')}
+                </p>
+              </div>
+
               {/* 手氣最佳 */}
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Gift size={20} className="text-blue-400" />
-                  <h4 className="text-white font-semibold">手氣最佳</h4>
+                  <h4 className="text-white font-semibold">{t('game_rules_best_mvp')}</h4>
                 </div>
-                <p className="text-gray-300 text-sm leading-relaxed">
-                  手氣最佳：隨機金額分配，領取完成後金額最大的用戶將被標記為「最佳手氣」。
-                </p>
+                <div className="text-gray-300 text-sm leading-relaxed space-y-2">
+                  <p><strong className="text-white">{t('game_rules_best_mvp_howto')}</strong></p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>{t('game_rules_best_mvp_rule1').replace('{random}', '<strong class="text-blue-400">隨機算法</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
+                    <li>{t('game_rules_best_mvp_rule2').replace('{max}', '<strong class="text-yellow-400">最大</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
+                    <li>{t('game_rules_best_mvp_rule3')}</li>
+                    <li>{t('game_rules_best_mvp_rule4').replace('{algorithm}', '<strong class="text-cyan-400">二倍均值算法</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
+                  </ul>
+                  <p className="mt-3"><strong className="text-white">{t('game_rules_best_mvp_scenario')}</strong></p>
+                  <p className="text-gray-400 text-xs">{t('game_rules_best_mvp_scenario_desc')}</p>
+                </div>
               </div>
 
               {/* 紅包炸彈 */}
               <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Bomb size={20} className="text-orange-400" />
-                  <h4 className="text-white font-semibold">紅包炸彈</h4>
+                  <h4 className="text-white font-semibold">{t('game_rules_bomb')}</h4>
                 </div>
                 <div className="text-gray-300 text-sm leading-relaxed space-y-2">
-                  <p><strong className="text-white">發包規則：</strong></p>
+                  <p><strong className="text-white">{t('game_rules_bomb_send')}</strong></p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>紅包金額可事先約定（建議 50-200 元）</li>
-                    <li>紅包個數：<strong className="text-orange-400">10 個（單雷）</strong> 或 <strong className="text-orange-400">5 個（雙雷）</strong></li>
-                    <li>需要設置炸彈數字（0-9），例如「200/1」表示 200 元，炸彈數字是 1</li>
+                    <li>{t('game_rules_bomb_send_rule1').replace('{amount}', '5-10').replace('{currency}', 'USDT').split(/(\d+-\d+|\w+)/g).map((part, i) => /^\d+-\d+$/.test(part) ? <strong key={i} className="text-orange-400">{part}</strong> : /^USDT|TON|STARS|POINTS$/.test(part) ? <strong key={i} className="text-blue-400">{part}</strong> : <span key={i}>{part}</span>)}</li>
+                    <li>{t('game_rules_bomb_send_rule2')}
+                      <ul className="list-circle list-inside ml-4 mt-1 space-y-1">
+                        <li>{t('game_rules_bomb_send_rule2a').replace('{single}', '<strong class="text-orange-400">5-8 個</strong>').replace('{full}', '<strong class="text-red-400">全額</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
+                        <li>{t('game_rules_bomb_send_rule2b').replace('{double}', '<strong class="text-orange-400">10 個</strong>').replace('{double_amount}', '<strong class="text-red-400">雙倍</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
+                      </ul>
+                    </li>
+                    <li>{t('game_rules_bomb_send_rule3').replace('{number}', '<strong class="text-red-400">炸彈數字</strong>').replace('{example}', '10 USDT/5').replace('{example_amount}', '10').replace('{currency}', 'USDT').replace('{example_number}', '5').split(/(<strong[^>]*>.*?<\/strong>|\d+)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : /^\d+$/.test(part) ? <strong key={i} className="text-yellow-400">{part}</strong> : <span key={i}>{part}</span>)}</li>
+                    <li>{t('game_rules_bomb_send_rule4').replace('{average}', '<strong class="text-yellow-400">平均分配</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
                   </ul>
                   
-                  <p className="mt-3"><strong className="text-white">搶包規則：</strong></p>
+                  <p className="mt-3"><strong className="text-white">{t('game_rules_bomb_grab')}</strong></p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>固定金額分配（平分）</li>
-                    <li>如果搶到的紅包<strong className="text-green-400">最後一位數字不是「雷」</strong>，這些錢就是「福利」，歸搶到的人所有</li>
-                    <li>如果搶到的紅包<strong className="text-red-400">最後一位數正好是「雷」</strong>，就「踩雷」了，需要賠錢</li>
+                    <li>{t('game_rules_bomb_grab_rule1').replace('{fixed}', '<strong class="text-green-400">固定且相同</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
+                    <li>{t('game_rules_bomb_grab_rule2').replace('{last_digit}', '<strong class="text-cyan-400">最後一位小數</strong>').replace('{example_amount}', '5.25').replace('{example_digit}', '5').split(/(<strong[^>]*>.*?<\/strong>|\d+\.\d+)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : /^\d+\.\d+$/.test(part) ? <strong key={i} className="text-yellow-400">{part}</strong> : <span key={i}>{part}</span>)}</li>
+                    <li>{t('game_rules_bomb_grab_rule3').replace('{not_equal}', '<strong class="text-green-400">不等於</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)} 🎉</li>
+                    <li>{t('game_rules_bomb_grab_rule4').replace('{equal}', '<strong class="text-red-400">等於</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)} 💣</li>
                   </ul>
                   
-                  <p className="mt-3"><strong className="text-white">賠錢規則：</strong></p>
+                  <p className="mt-3"><strong className="text-white">{t('game_rules_bomb_pay')}</strong></p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li><strong className="text-orange-400">單雷（10 個包）</strong>：搶到「雷」的人需要賠給發包人紅包的全額金額（例如 200 元）</li>
-                    <li><strong className="text-orange-400">雙雷（5 個包）</strong>：搶到「雷」的人需要賠雙倍金額（例如 400 元）</li>
-                    <li>如果有多人同時「踩雷」，還需要添加「彩頭」，金額事先約定，隨著同時踩雷的人數增加，彩頭金額也會增加</li>
+                    <li>{t('game_rules_bomb_pay_single').replace('{single}', '<strong class="text-orange-400">單炸彈</strong>').replace('{single_count}', '5-8').split(/(<strong[^>]*>.*?<\/strong>|\d+-\d+)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : /^\d+-\d+$/.test(part) ? <strong key={i} className="text-orange-400">{part}</strong> : <span key={i}>{part}</span>)}
+                      <ul className="list-circle list-inside ml-4 mt-1">
+                        <li>{t('game_rules_bomb_pay_single_rule').replace('{full}', '<strong class="text-red-400">紅包全額</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
+                        <li>{t('game_rules_bomb_pay_single_example').replace(/{example_amount}/g, '10').replace('{currency}', 'USDT').split(/(\d+|USDT|TON|STARS|POINTS)/g).map((part, i) => /^\d+$/.test(part) ? <strong key={i} className="text-yellow-400">{part}</strong> : /^(USDT|TON|STARS|POINTS)$/.test(part) ? <strong key={i} className="text-blue-400">{part}</strong> : <span key={i}>{part}</span>)}</li>
+                      </ul>
+                    </li>
+                    <li>{t('game_rules_bomb_pay_double').replace('{double}', '<strong class="text-orange-400">雙炸彈</strong>').replace('{double_count}', '10').split(/(<strong[^>]*>.*?<\/strong>|\d+)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : /^\d+$/.test(part) ? <strong key={i} className="text-orange-400">{part}</strong> : <span key={i}>{part}</span>)}
+                      <ul className="list-circle list-inside ml-4 mt-1">
+                        <li>{t('game_rules_bomb_pay_double_rule').replace('{double_amount}', '<strong class="text-red-400">雙倍金額</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
+                        <li>{t('game_rules_bomb_pay_double_example').replace(/{example_amount}/g, '10').replace('{double_example_amount}', '20').replace('{currency}', 'USDT').split(/(\d+|USDT|TON|STARS|POINTS)/g).map((part, i) => /^\d+$/.test(part) ? <strong key={i} className="text-yellow-400">{part}</strong> : /^(USDT|TON|STARS|POINTS)$/.test(part) ? <strong key={i} className="text-blue-400">{part}</strong> : <span key={i}>{part}</span>)}</li>
+                      </ul>
+                    </li>
+                    <li>{t('game_rules_bomb_pay_bonus').replace('{multiple}', '<strong class="text-yellow-400">多人</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
                   </ul>
                   
-                  <p className="mt-3"><strong className="text-red-400">⚠️ 重要提示：</strong></p>
-                  <p className="text-red-300 text-xs">
-                    如果您的餘額不夠雙倍賠付的金額（雙雷）或全額賠付（單雷），就不能參與搶紅包。請確保餘額充足！
-                  </p>
+                  <p className="mt-3"><strong className="text-red-400">{t('game_rules_bomb_warning')}</strong></p>
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-2">
+                    <ul className="text-red-300 text-xs space-y-1.5">
+                      <li>• {t('game_rules_bomb_warning_rule1').replace('{balance}', '<strong>餘額是否充足</strong>').split(/(<strong>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
+                      <li>• {t('game_rules_bomb_warning_rule2').replace('{single}', '<strong class="text-red-400">單炸彈</strong>').replace('{example_amount}', '10').replace('{currency}', 'USDT').split(/(<strong[^>]*>.*?<\/strong>|\d+)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : /^\d+$/.test(part) ? <strong key={i} className="text-yellow-400">{part}</strong> : <span key={i}>{part}</span>)}</li>
+                      <li>• {t('game_rules_bomb_warning_rule3').replace('{double}', '<strong class="text-red-400">雙炸彈</strong>').replace('{double_example_amount}', '20').replace('{currency}', 'USDT').split(/(<strong[^>]*>.*?<\/strong>|\d+)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : /^\d+$/.test(part) ? <strong key={i} className="text-yellow-400">{part}</strong> : <span key={i}>{part}</span>)}</li>
+                      <li>• {t('game_rules_bomb_warning_rule4').replace('{unable}', '<strong>無法參與搶包</strong>').split(/(<strong>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
+                      <li>• {t('game_rules_bomb_warning_rule5').replace('{deduct}', '<strong>對應幣種餘額</strong>').split(/(<strong>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
+
+              {/* 專屬紅包 */}
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <User size={20} className="text-purple-400" />
+                  <h4 className="text-white font-semibold">{t('game_rules_exclusive')}</h4>
+                </div>
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  {t('game_rules_exclusive_desc').replace('{specified}', '<strong class="text-purple-400">指定用戶</strong>').split(/(<strong[^>]*>.*?<\/strong>)/g).map((part, i) => part.startsWith('<strong') ? <span key={i} dangerouslySetInnerHTML={{ __html: part }} /> : <span key={i}>{part}</span>)}
+                </p>
+              </div>
+
+              {/* 娛樂提醒 */}
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+                <p className="text-yellow-200 text-sm leading-relaxed text-center">
+                  {t('game_rules_entertainment')}
+                </p>
+              </div>
+            </div>
+
+            {/* 不再顯示選擇框 */}
+            <div className="flex items-center gap-2 mt-4 mb-4 shrink-0">
+              <input
+                type="checkbox"
+                id="dontShowAgain"
+                checked={dontShowAgain}
+                onChange={(e) => setDontShowAgain(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-brand-red focus:ring-brand-red focus:ring-2"
+              />
+              <label htmlFor="dontShowAgain" className="text-gray-300 text-sm cursor-pointer select-none">
+                {t('dont_show_again')}
+              </label>
             </div>
 
             {/* 關閉按鈕 */}
             <button
-              onClick={() => setShowRulesModal(false)}
-              className="w-full mt-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl text-white font-semibold hover:from-orange-600 hover:to-red-600 transition-all shrink-0"
+              onClick={() => {
+                if (dontShowAgain) {
+                  localStorage.setItem('dont_show_game_rules', 'true')
+                }
+                setShowRulesModal(false)
+              }}
+              className="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl text-white font-semibold hover:from-orange-600 hover:to-red-600 transition-all shrink-0 mb-2"
             >
-              知道了
+              {t('got_it')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 幣種獲取方式彈窗 */}
+      {showCurrencyModal && selectedCurrencyInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowCurrencyModal(false)}>
+          <div className="bg-gradient-to-br from-brand-darker via-brand-darker to-gray-900 rounded-2xl p-6 max-w-md w-full border border-white/20 shadow-2xl max-h-[90vh] overflow-hidden flex flex-col relative" onClick={(e) => e.stopPropagation()}>
+            {/* 標題 */}
+            <div className="flex items-center justify-between mb-4 shrink-0 relative z-10">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center shadow-lg">
+                  <Wallet size={18} className="text-white" />
+                </div>
+                <h3 className="text-white text-xl font-bold">
+                  {selectedCurrencyInfo === 'USDT' && t('currency_usdt_get_methods')}
+                  {selectedCurrencyInfo === 'TON' && t('currency_ton_get_methods')}
+                  {selectedCurrencyInfo === 'Stars' && t('currency_stars_get_methods')}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowCurrencyModal(false)}
+                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-white" />
+              </button>
+            </div>
+
+            {/* 幣種說明 */}
+            <div className="mb-4 shrink-0 relative z-10">
+              <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-xl p-4">
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  {selectedCurrencyInfo === 'USDT' && t('currency_usdt_desc')}
+                  {selectedCurrencyInfo === 'TON' && t('currency_ton_desc')}
+                  {selectedCurrencyInfo === 'Stars' && t('currency_stars_desc')}
+                </p>
+              </div>
+            </div>
+
+            {/* 獲取方式內容 */}
+            <div className="space-y-4 overflow-y-auto flex-1 relative z-10 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+              {/* Telegram 錢包綁定 */}
+              {(selectedCurrencyInfo === 'USDT' || selectedCurrencyInfo === 'TON') && (
+                <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/30 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wallet size={20} className="text-green-400" />
+                    <h4 className="text-white font-semibold text-base">{t('currency_get_method_telegram_wallet')}</h4>
+                  </div>
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    {t('currency_get_method_telegram_wallet_desc')}
+                  </p>
+                </div>
+              )}
+
+              {/* 銀行卡充值 */}
+              {(selectedCurrencyInfo === 'USDT' || selectedCurrencyInfo === 'TON') && (
+                <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wallet size={20} className="text-yellow-400" />
+                    <h4 className="text-white font-semibold text-base">{t('currency_get_method_bank_card')}</h4>
+                  </div>
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    {t('currency_get_method_bank_card_desc')}
+                  </p>
+                </div>
+              )}
+
+              {/* 交易所購買 */}
+              {(selectedCurrencyInfo === 'USDT' || selectedCurrencyInfo === 'TON') && (
+                <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wallet size={20} className="text-purple-400" />
+                    <h4 className="text-white font-semibold text-base">{t('currency_get_method_exchange')}</h4>
+                  </div>
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    {t('currency_get_method_exchange_desc')}
+                  </p>
+                </div>
+              )}
+
+              {/* Telegram Stars 獲取 */}
+              {selectedCurrencyInfo === 'Stars' && (
+                <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TelegramStar size={20} withSpray={true} />
+                    <h4 className="text-white font-semibold text-base">{t('currency_get_method_telegram_stars')}</h4>
+                  </div>
+                  <div className="text-gray-300 text-sm leading-relaxed space-y-2">
+                    {t('currency_get_method_telegram_stars_desc').split('\n').map((line, i) => (
+                      <p key={i}>{line}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 關閉按鈕 */}
+            <button
+              onClick={() => setShowCurrencyModal(false)}
+              className="w-full mt-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl text-white font-semibold hover:from-blue-600 hover:to-purple-600 transition-all shrink-0 shadow-lg shadow-blue-500/30 relative z-10"
+            >
+              {t('got_it')}
             </button>
           </div>
         </div>

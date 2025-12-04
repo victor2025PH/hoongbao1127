@@ -14,6 +14,13 @@ import TransactionManagement from './pages/TransactionManagement'
 import TransactionDetail from './pages/TransactionDetail'
 import CheckinManagement from './pages/CheckinManagement'
 import InviteManagement from './pages/InviteManagement'
+// 安全中心頁面
+import SecurityDashboard from './pages/SecurityDashboard'
+import RiskMonitor from './pages/RiskMonitor'
+import DeviceManagement from './pages/DeviceManagement'
+import IPMonitor from './pages/IPMonitor'
+import AlertLogs from './pages/AlertLogs'
+import LiquidityManagement from './pages/LiquidityManagement'
 import { useAuthStore } from './stores/authStore'
 
 function App() {
@@ -42,6 +49,13 @@ function App() {
                   <Route path="/transactions/:id" element={<TransactionDetail />} />
                   <Route path="/checkin" element={<CheckinManagement />} />
                   <Route path="/invite" element={<InviteManagement />} />
+                  {/* 安全中心路由 */}
+                  <Route path="/security" element={<SecurityDashboard />} />
+                  <Route path="/security/risk" element={<RiskMonitor />} />
+                  <Route path="/security/devices" element={<DeviceManagement />} />
+                  <Route path="/security/ip" element={<IPMonitor />} />
+                  <Route path="/security/alerts" element={<AlertLogs />} />
+                  <Route path="/security/liquidity" element={<LiquidityManagement />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </AppLayout>

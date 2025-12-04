@@ -9,7 +9,7 @@ settings = get_settings()
 
 
 def get_main_reply_keyboard():
-    """主回覆鍵盤 - 一級菜單（對應 miniapp 底部導航）"""
+    """主回覆鍵盤 - 一級菜單（對應 miniapp 底部導航），所有按鈕在機器人中完成"""
     keyboard = [
         [
             KeyboardButton("💰 錢包"),
@@ -21,7 +21,6 @@ def get_main_reply_keyboard():
         ],
         [
             KeyboardButton("👤 我的"),
-            KeyboardButton("📱 打開應用"),
         ],
     ]
     return ReplyKeyboardMarkup(
@@ -32,7 +31,7 @@ def get_main_reply_keyboard():
 
 
 def get_wallet_reply_keyboard():
-    """錢包回覆鍵盤 - 二級菜單"""
+    """錢包回覆鍵盤 - 二級菜單，所有按鈕在機器人中完成"""
     keyboard = [
         [
             KeyboardButton("💵 充值"),
@@ -54,7 +53,7 @@ def get_wallet_reply_keyboard():
 
 
 def get_packets_reply_keyboard():
-    """紅包回覆鍵盤 - 二級菜單"""
+    """紅包回覆鍵盤 - 二級菜單，所有按鈕在機器人中完成"""
     keyboard = [
         [
             KeyboardButton("📋 查看紅包"),
@@ -211,7 +210,7 @@ def get_send_packet_confirm_keyboard():
 
 
 def get_earn_reply_keyboard():
-    """賺取回覆鍵盤 - 二級菜單"""
+    """賺取回覆鍵盤 - 二級菜單，所有按鈕在機器人中完成"""
     keyboard = [
         [
             KeyboardButton("📅 每日簽到"),
@@ -233,7 +232,7 @@ def get_earn_reply_keyboard():
 
 
 def get_game_reply_keyboard():
-    """遊戲回覆鍵盤 - 二級菜單"""
+    """遊戲回覆鍵盤 - 二級菜單，所有按鈕在機器人中完成"""
     keyboard = [
         [
             KeyboardButton("🎰 金運局"),
@@ -251,7 +250,7 @@ def get_game_reply_keyboard():
 
 
 def get_profile_reply_keyboard():
-    """個人資料回覆鍵盤 - 二級菜單"""
+    """個人資料回覆鍵盤 - 二級菜單，所有按鈕在機器人中完成"""
     keyboard = [
         [
             KeyboardButton("📊 我的資料"),

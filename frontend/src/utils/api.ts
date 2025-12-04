@@ -302,6 +302,51 @@ export async function createWithdrawOrder(amount: number, currency: string, addr
   return api.post('/v1/wallet/withdraw', { amount, currency, address })
 }
 
+// ============ 兌換相關 API ============
+
+export interface ExchangeRequest {
+  from_currency: string
+  to_currency: string
+  amount: number
+}
+
+export interface ExchangeResponse {
+  success: boolean
+  from_currency: string
+  to_currency: string
+  from_amount: number
+  to_amount: number
+  exchange_rate: number
+  transaction_id: number
+  message: string
+}
+
+export async function exchangeCurrency(request: ExchangeRequest): Promise<ExchangeResponse> {
+  return api.post('/exchange', request)
+}
+
+export interface ExchangeRateRequest {
+  from_currency: string
+  to_currency: string
+}
+
+export interface ExchangeRateResponse {
+  from_currency: string
+  to_currency: string
+  rate: number
+  source: 'market' | 'fixed'
+  updated_at?: string
+}
+
+export async function getExchangeRate(request: ExchangeRateRequest): Promise<ExchangeRateResponse> {
+  return api.get('/exchange/rate', {
+    params: {
+      from_currency: request.from_currency,
+      to_currency: request.to_currency
+    }
+  })
+}
+
 // ============ 消息相關 API ============
 
 export interface Message {

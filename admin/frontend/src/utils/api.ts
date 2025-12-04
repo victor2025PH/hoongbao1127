@@ -108,3 +108,31 @@ export const reportApi = {
   download: (reportId: number) => api.get(`/v1/admin/reports/${reportId}/download`, { responseType: 'blob' }),
 }
 
+// 安全中心 API
+export const securityApi = {
+  // 安全總覽
+  getStats: () => api.get('/v1/admin/security/stats'),
+  getTrends: (params?: any) => api.get('/v1/admin/security/trends', { params }),
+  
+  // 風險監控
+  getRiskUsers: (params?: any) => api.get('/v1/admin/security/risk/users', { params }),
+  
+  // 警報管理
+  getAlerts: (params?: any) => api.get('/v1/admin/security/alerts', { params }),
+  alertAction: (alertId: number, data: any) => api.post(`/v1/admin/security/alerts/${alertId}/action`, data),
+  
+  // 設備管理
+  getDevices: (params?: any) => api.get('/v1/admin/security/devices', { params }),
+  deviceAction: (deviceId: number, data: any) => api.post(`/v1/admin/security/devices/${deviceId}/action`, data),
+  
+  // IP 監控
+  getIPSessions: (params?: any) => api.get('/v1/admin/security/ip-sessions', { params }),
+  getIPStats: () => api.get('/v1/admin/security/ip-stats'),
+  ipAction: (ipAddress: string, data: any) => api.post(`/v1/admin/security/ip/${encodeURIComponent(ipAddress)}/action`, data),
+  
+  // 流動性管理
+  getLiquidityStats: () => api.get('/v1/admin/security/liquidity/stats'),
+  getLiquidityEntries: (params?: any) => api.get('/v1/admin/security/liquidity/entries', { params }),
+  adjustLiquidity: (data: any) => api.post('/v1/admin/security/liquidity/adjust', data),
+}
+

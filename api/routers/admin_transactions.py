@@ -538,3 +538,289 @@ async def reject_transaction(
         "status": transaction.status,
     }
 
+
+# ========================================
+# 審核統計和批量操作
+# ========================================
+
+class BatchApproveRequest(BaseModel):
+    """批量批准請求"""
+    transaction_ids: List[int]
+    note: Optional[str] = None
+
+
+class BatchRejectRequest(BaseModel):
+    """批量拒絕請求"""
+    transaction_ids: List[int]
+    reason: str
+
+
+@router.get("/pending/stats")
+async def get_pending_stats(
+    db: AsyncSession = Depends(get_db_session),
+    current_admin: dict = Depends(get_current_admin),
+):
+    """獲取待審核統計"""
+    # 充值統計
+    deposit_result = await db.execute(
+        select(
+            func.count(Transaction.id).label('count'),
+            func.sum(Transaction.amount).label('total')
+        ).where(
+            Transaction.status == "pending",
+            Transaction.type == "deposit"
+        )
+    )
+    deposit_stats = deposit_result.one()
+    
+    # 提現統計
+    withdraw_result = await db.execute(
+        select(
+            func.count(Transaction.id).label('count'),
+            func.sum(Transaction.amount).label('total')
+        ).where(
+            Transaction.status == "pending",
+            Transaction.type == "withdraw"
+        )
+    )
+    withdraw_stats = withdraw_result.one()
+    
+    # 按幣種統計
+    currency_stats = {}
+    for currency in ['usdt', 'ton', 'stars', 'points']:
+        try:
+            currency_type = CurrencyType(currency)
+            result = await db.execute(
+                select(
+                    func.count(Transaction.id).label('count'),
+                    func.sum(Transaction.amount).label('total')
+                ).where(
+                    Transaction.status == "pending",
+                    Transaction.type.in_(["deposit", "withdraw"]),
+                    Transaction.currency == currency_type
+                )
+            )
+            stats = result.one()
+            currency_stats[currency] = {
+                "count": stats.count or 0,
+                "total": float(stats.total or 0)
+            }
+        except:
+            currency_stats[currency] = {"count": 0, "total": 0}
+    
+    return {
+        "deposit": {
+            "count": deposit_stats.count or 0,
+            "total": float(deposit_stats.total or 0)
+        },
+        "withdraw": {
+            "count": withdraw_stats.count or 0,
+            "total": float(withdraw_stats.total or 0)
+        },
+        "by_currency": currency_stats,
+        "total_pending": (deposit_stats.count or 0) + (withdraw_stats.count or 0)
+    }
+
+
+@router.post("/batch/approve")
+async def batch_approve_transactions(
+    request: BatchApproveRequest,
+    db: AsyncSession = Depends(get_db_session),
+    current_admin: dict = Depends(get_current_admin),
+):
+    """批量批准交易"""
+    if len(request.transaction_ids) > 100:
+        raise HTTPException(status_code=400, detail="一次最多批量處理 100 筆交易")
+    
+    results = {"success": [], "failed": []}
+    
+    for tx_id in request.transaction_ids:
+        try:
+            result = await db.execute(select(Transaction).where(Transaction.id == tx_id))
+            transaction = result.scalar_one_or_none()
+            
+            if not transaction:
+                results["failed"].append({"id": tx_id, "reason": "交易不存在"})
+                continue
+            
+            if transaction.status != "pending":
+                results["failed"].append({"id": tx_id, "reason": f"狀態為 {transaction.status}"})
+                continue
+            
+            if transaction.type not in ["deposit", "withdraw"]:
+                results["failed"].append({"id": tx_id, "reason": "非充值/提現交易"})
+                continue
+            
+            # 獲取用戶
+            user_result = await db.execute(select(User).where(User.id == transaction.user_id))
+            user = user_result.scalar_one_or_none()
+            
+            if not user:
+                results["failed"].append({"id": tx_id, "reason": "用戶不存在"})
+                continue
+            
+            balance_field = f"balance_{transaction.currency.value}"
+            current_balance = getattr(user, balance_field, 0) or Decimal(0)
+            
+            if transaction.type == "deposit":
+                new_balance = current_balance + transaction.amount
+                setattr(user, balance_field, new_balance)
+                transaction.balance_after = new_balance
+            
+            transaction.status = "completed"
+            if request.note:
+                transaction.note = f"{transaction.note or ''} [批量審核通過: {request.note}]".strip()
+            
+            results["success"].append(tx_id)
+            
+        except Exception as e:
+            results["failed"].append({"id": tx_id, "reason": str(e)})
+    
+    await db.commit()
+    
+    logger.info(
+        f"Batch approve: success={len(results['success'])}, failed={len(results['failed'])}, "
+        f"admin_id={current_admin.get('id')}"
+    )
+    
+    return {
+        "success": True,
+        "approved_count": len(results["success"]),
+        "failed_count": len(results["failed"]),
+        "results": results
+    }
+
+
+@router.post("/batch/reject")
+async def batch_reject_transactions(
+    request: BatchRejectRequest,
+    db: AsyncSession = Depends(get_db_session),
+    current_admin: dict = Depends(get_current_admin),
+):
+    """批量拒絕交易"""
+    if len(request.transaction_ids) > 100:
+        raise HTTPException(status_code=400, detail="一次最多批量處理 100 筆交易")
+    
+    results = {"success": [], "failed": []}
+    
+    for tx_id in request.transaction_ids:
+        try:
+            result = await db.execute(select(Transaction).where(Transaction.id == tx_id))
+            transaction = result.scalar_one_or_none()
+            
+            if not transaction:
+                results["failed"].append({"id": tx_id, "reason": "交易不存在"})
+                continue
+            
+            if transaction.status != "pending":
+                results["failed"].append({"id": tx_id, "reason": f"狀態為 {transaction.status}"})
+                continue
+            
+            if transaction.type not in ["deposit", "withdraw"]:
+                results["failed"].append({"id": tx_id, "reason": "非充值/提現交易"})
+                continue
+            
+            # 獲取用戶
+            user_result = await db.execute(select(User).where(User.id == transaction.user_id))
+            user = user_result.scalar_one_or_none()
+            
+            if not user:
+                results["failed"].append({"id": tx_id, "reason": "用戶不存在"})
+                continue
+            
+            # 提現拒絕需要退款
+            if transaction.type == "withdraw":
+                balance_field = f"balance_{transaction.currency.value}"
+                current_balance = getattr(user, balance_field, 0) or Decimal(0)
+                new_balance = current_balance + transaction.amount
+                setattr(user, balance_field, new_balance)
+                transaction.balance_after = new_balance
+            
+            transaction.status = "rejected"
+            transaction.note = f"{transaction.note or ''} [批量審核拒絕: {request.reason}]".strip()
+            
+            results["success"].append(tx_id)
+            
+        except Exception as e:
+            results["failed"].append({"id": tx_id, "reason": str(e)})
+    
+    await db.commit()
+    
+    logger.info(
+        f"Batch reject: success={len(results['success'])}, failed={len(results['failed'])}, "
+        f"reason={request.reason}, admin_id={current_admin.get('id')}"
+    )
+    
+    return {
+        "success": True,
+        "rejected_count": len(results["success"]),
+        "failed_count": len(results["failed"]),
+        "results": results
+    }
+
+
+@router.get("/audit-log")
+async def get_audit_log(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    action: Optional[str] = Query(None, description="approve/reject"),
+    db: AsyncSession = Depends(get_db_session),
+    current_admin: dict = Depends(get_current_admin),
+):
+    """獲取審核日誌"""
+    # 查詢已審核的交易（非 pending 狀態的充值/提現）
+    conditions = [
+        Transaction.type.in_(["deposit", "withdraw"]),
+        Transaction.status.in_(["completed", "rejected"])
+    ]
+    
+    if action == "approve":
+        conditions.append(Transaction.status == "completed")
+    elif action == "reject":
+        conditions.append(Transaction.status == "rejected")
+    
+    # 統計總數
+    count_query = select(func.count(Transaction.id)).where(*conditions)
+    total = (await db.execute(count_query)).scalar() or 0
+    
+    # 查詢數據
+    query = (
+        select(Transaction)
+        .where(*conditions)
+        .order_by(Transaction.updated_at.desc() if hasattr(Transaction, 'updated_at') else Transaction.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    
+    result = await db.execute(query)
+    transactions = result.scalars().all()
+    
+    # 獲取用戶信息
+    user_ids = list(set(tx.user_id for tx in transactions))
+    users_result = await db.execute(select(User).where(User.id.in_(user_ids)))
+    users = {u.id: u for u in users_result.scalars().all()}
+    
+    items = []
+    for tx in transactions:
+        user = users.get(tx.user_id)
+        items.append({
+            "id": tx.id,
+            "user_id": tx.user_id,
+            "user_tg_id": user.tg_id if user else None,
+            "user_name": f"{user.first_name or ''} {user.last_name or ''}".strip() if user else None,
+            "type": tx.type,
+            "currency": tx.currency.value,
+            "amount": float(tx.amount),
+            "status": tx.status,
+            "note": tx.note,
+            "created_at": tx.created_at.isoformat() if tx.created_at else None,
+        })
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size,
+    }
+

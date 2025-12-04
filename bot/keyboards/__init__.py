@@ -8,8 +8,10 @@ from shared.config.settings import get_settings
 settings = get_settings()
 
 
-def get_main_menu():
-    """主菜單 - 對應 miniapp 底部導航"""
+def get_main_menu(user=None):
+    """主菜單 - 對應 miniapp 底部導航，所有按鈕在機器人中完成"""
+    from bot.utils.i18n import t
+    
     keyboard = [
         [
             InlineKeyboardButton("💰 錢包", callback_data="menu:wallet"),
@@ -22,97 +24,102 @@ def get_main_menu():
         [
             InlineKeyboardButton("👤 我的", callback_data="menu:profile"),
         ],
+        [
+            InlineKeyboardButton(t("language", user=user), callback_data="menu:language"),
+        ],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
 def get_wallet_menu():
-    """錢包子菜單"""
+    """錢包子菜單 - 所有按鈕打開 miniapp"""
     keyboard = [
         [
-            InlineKeyboardButton("💵 充值", callback_data="wallet:deposit"),
-            InlineKeyboardButton("💸 提現", callback_data="wallet:withdraw"),
+            InlineKeyboardButton("💵 充值", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/recharge")),
+            InlineKeyboardButton("💸 提現", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/withdraw")),
         ],
         [
-            InlineKeyboardButton("📜 交易記錄", callback_data="wallet:history"),
-            InlineKeyboardButton("🔄 兌換", callback_data="wallet:exchange"),
+            InlineKeyboardButton("📜 交易記錄", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/wallet?tab=records")),
+            InlineKeyboardButton("🔄 兌換", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/exchange")),
         ],
         [
-            InlineKeyboardButton("◀️ 返回主菜單", callback_data="menu:main"),
+            InlineKeyboardButton("◀️ 返回主菜單", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}")),
         ],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
-def get_packets_menu():
-    """紅包子菜單"""
+def get_packets_menu(user=None):
+    """紅包子菜單 - 所有按鈕在機器人中完成"""
+    from bot.utils.i18n import t
+    
     keyboard = [
         [
-            InlineKeyboardButton("📋 查看紅包", callback_data="packets:list"),
-            InlineKeyboardButton("➕ 發紅包", callback_data="packets:send"),
+            InlineKeyboardButton(t("view_packets", user=user), callback_data="packets:list"),
+            InlineKeyboardButton(t("send_packet", user=user), callback_data="packets:send"),
         ],
         [
-            InlineKeyboardButton("🎁 我的紅包", callback_data="packets:my"),
+            InlineKeyboardButton(t("my_packets", user=user), callback_data="packets:my"),
         ],
         [
-            InlineKeyboardButton("◀️ 返回主菜單", callback_data="menu:main"),
+            InlineKeyboardButton(t("return_main", user=user), callback_data="menu:main"),
         ],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
 def get_earn_menu():
-    """賺取子菜單"""
+    """賺取子菜單 - 所有按鈕打開 miniapp"""
     keyboard = [
         [
-            InlineKeyboardButton("📅 每日簽到", callback_data="earn:checkin"),
-            InlineKeyboardButton("👥 邀請好友", callback_data="earn:invite"),
+            InlineKeyboardButton("📅 每日簽到", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/earn?tab=checkin")),
+            InlineKeyboardButton("👥 邀請好友", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/earn?tab=invite")),
         ],
         [
-            InlineKeyboardButton("🎯 任務中心", callback_data="earn:tasks"),
+            InlineKeyboardButton("🎯 任務中心", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/earn?tab=tasks")),
             InlineKeyboardButton("🎰 幸運轉盤", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/lucky-wheel")),
         ],
         [
-            InlineKeyboardButton("◀️ 返回主菜單", callback_data="menu:main"),
+            InlineKeyboardButton("◀️ 返回主菜單", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}")),
         ],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
 def get_profile_menu():
-    """個人資料子菜單"""
+    """個人資料子菜單 - 所有按鈕打開 miniapp"""
     keyboard = [
         [
-            InlineKeyboardButton("📊 我的資料", callback_data="profile:info"),
-            InlineKeyboardButton("📈 統計數據", callback_data="profile:stats"),
+            InlineKeyboardButton("📊 我的資料", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/profile")),
+            InlineKeyboardButton("📈 統計數據", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/profile?tab=stats")),
         ],
         [
-            InlineKeyboardButton("⚙️ 設置", callback_data="profile:settings"),
+            InlineKeyboardButton("⚙️ 設置", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/profile?tab=settings")),
         ],
         [
-            InlineKeyboardButton("◀️ 返回主菜單", callback_data="menu:main"),
+            InlineKeyboardButton("◀️ 返回主菜單", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}")),
         ],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
 def get_exchange_menu():
-    """兌換子菜單"""
+    """兌換子菜單 - 所有按鈕打開 miniapp"""
     keyboard = [
         [
-            InlineKeyboardButton("USDT → TON", callback_data="exchange:usdt_ton"),
-            InlineKeyboardButton("TON → USDT", callback_data="exchange:ton_usdt"),
+            InlineKeyboardButton("USDT → TON", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/exchange?from=usdt&to=ton")),
+            InlineKeyboardButton("TON → USDT", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/exchange?from=ton&to=usdt")),
         ],
         [
-            InlineKeyboardButton("USDT → 能量", callback_data="exchange:usdt_points"),
-            InlineKeyboardButton("能量 → USDT", callback_data="exchange:points_usdt"),
+            InlineKeyboardButton("USDT → 能量", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/exchange?from=usdt&to=points")),
+            InlineKeyboardButton("能量 → USDT", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/exchange?from=points&to=usdt")),
         ],
         [
-            InlineKeyboardButton("TON → 能量", callback_data="exchange:ton_points"),
-            InlineKeyboardButton("能量 → TON", callback_data="exchange:points_ton"),
+            InlineKeyboardButton("TON → 能量", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/exchange?from=ton&to=points")),
+            InlineKeyboardButton("能量 → TON", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/exchange?from=points&to=ton")),
         ],
         [
-            InlineKeyboardButton("◀️ 返回錢包", callback_data="menu:wallet"),
+            InlineKeyboardButton("◀️ 返回錢包", web_app=WebAppInfo(url=f"{settings.MINIAPP_URL}/wallet")),
         ],
     ]
     return InlineKeyboardMarkup(keyboard)

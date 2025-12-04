@@ -1,26 +1,62 @@
 #!/bin/bash
-# 快速更新腳本 - 拉取代碼並重啟服務
+# ============================================
+# Lucky Red 快速更新腳本
+# ============================================
 
 set -e
 
-APP_DIR="/opt/luckyred"
+# 顏色輸出
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
-echo "=== 拉取最新代碼 ==="
-cd $APP_DIR
-git pull
+PROJECT_DIR="/opt/luckyred"
 
-echo "=== 構建前端 ==="
-cd $APP_DIR/frontend
-npm install
-npm run build
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
 
-echo "=== 重啟服務 ==="
-systemctl restart luckyred-api luckyred-bot luckyred-admin
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
 
-echo "=== 檢查狀態 ==="
-systemctl status luckyred-api --no-pager
-systemctl status luckyred-bot --no-pager
-systemctl status luckyred-admin --no-pager
+# 更新代碼
+log_info "更新代碼..."
+cd "$PROJECT_DIR"
+git fetch origin
+git reset --hard origin/master
+log_info "代碼已更新"
 
-echo "=== 更新完成 ==="
+# 更新 API
+log_info "更新 API..."
+cd "$PROJECT_DIR/api"
+if [ -d ".venv" ]; then
+    source .venv/bin/activate
+    pip install -r requirements.txt
+    deactivate
+fi
+sudo systemctl restart luckyred-api
+log_info "API 已更新並重啟"
 
+# 更新 Bot
+log_info "更新 Bot..."
+cd "$PROJECT_DIR/bot"
+if [ -d ".venv" ]; then
+    source .venv/bin/activate
+    pip install -r requirements.txt
+    deactivate
+fi
+sudo systemctl restart luckyred-bot
+log_info "Bot 已更新並重啟"
+
+# 更新前端
+log_info "更新前端..."
+cd "$PROJECT_DIR/frontend"
+if [ -f "package.json" ]; then
+    npm install
+    npm run build
+fi
+sudo systemctl reload nginx
+log_info "前端已更新"
+
+log_info "更新完成！"
