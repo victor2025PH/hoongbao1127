@@ -248,6 +248,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // 充值頁
     select_currency: '選擇幣種',
+    select_network: '選擇網絡',
     quick_amount: '快捷金額',
     custom_amount: '自定義金額',
     deposit_address: '收款地址',
@@ -479,6 +480,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // 充值页
     select_currency: '选择币种',
+    select_network: '选择网络',
     quick_amount: '快捷金额',
     custom_amount: '自定义金额',
     deposit_address: '收款地址',
@@ -823,6 +825,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Recharge page
     select_currency: 'Select Currency',
+    select_network: 'Select Network',
     quick_amount: 'Quick Amount',
     custom_amount: 'Custom Amount',
     deposit_address: 'Deposit Address',

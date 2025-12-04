@@ -1,28 +1,134 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Box, Sparkles, Crown, Share2, Check, Gift, Gamepad2 } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Box, Sparkles, Crown, Share2, Check, Gift, Gamepad2, RefreshCw, Bomb } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { useTranslation } from '../providers/I18nProvider'
-import { listRedPackets } from '../utils/api'
+import { listRedPackets, claimRedPacket, type RedPacket } from '../utils/api'
 import { useSound } from '../hooks/useSound'
-import { MOCK_RED_PACKETS, type MockRedPacket } from '../utils/mockData'
 import ResultModal from '../components/ResultModal'
 import TelegramStar from '../components/TelegramStar'
 import PageTransition from '../components/PageTransition'
 
+// 紅包類型映射
+interface PacketDisplay {
+  id: string
+  senderName: string
+  senderAvatar: string
+  senderLevel: number
+  message: string
+  totalQuantity: number
+  remainingQuantity: number
+  type: 'ordinary' | 'lucky' | 'exclusive'
+  status: 'active' | 'completed' | 'expired'
+  timestamp: number
+  currency: 'USDT' | 'TON' | 'Stars'
+  amount: number
+  chatTitle?: string
+  isFromGameGroup?: boolean
+  isBomb?: boolean
+  uuid?: string
+}
+
+// 將 API 紅包轉換為顯示格式
+function convertToDisplay(packet: RedPacket): PacketDisplay {
+  const packetType = packet.type === 'random' ? 'lucky' : 'ordinary'
+  const isBomb = packet.type === 'fixed' && (packet as any).bomb_number !== undefined
+  
+  return {
+    id: packet.id,
+    uuid: packet.id,
+    senderName: packet.sender_name || '匿名用戶',
+    senderAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${packet.sender_id}`,
+    senderLevel: Math.floor(Math.random() * 50) + 1, // TODO: 從 API 獲取真實等級
+    message: packet.message || '恭喜發財！🧧',
+    totalQuantity: packet.quantity,
+    remainingQuantity: packet.remaining,
+    type: isBomb ? 'exclusive' : packetType,
+    status: packet.status,
+    timestamp: new Date(packet.created_at).getTime(),
+    currency: (packet.currency?.toUpperCase() || 'USDT') as 'USDT' | 'TON' | 'Stars',
+    amount: packet.amount,
+    chatTitle: (packet as any).chat_title,
+    isFromGameGroup: !!(packet as any).chat_id,
+    isBomb,
+  }
+}
+
 export default function PacketsPage() {
   const { t } = useTranslation()
   const { playSound } = useSound()
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'all' | 'crypto' | 'points'>('all')
-  const [selectedPacket, setSelectedPacket] = useState<MockRedPacket | null>(null)
+  const [selectedPacket, setSelectedPacket] = useState<PacketDisplay | null>(null)
   const [showResultModal, setShowResultModal] = useState(false)
   const [claimAmount, setClaimAmount] = useState(0)
+  const [claimMessage, setClaimMessage] = useState('')
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [isCopied, setIsCopied] = useState<string | null>(null)
 
-  // 使用模擬數據
-  const packets = MOCK_RED_PACKETS
+  // 使用真實 API 獲取紅包列表
+  const { data: rawPackets, isLoading, error, refetch } = useQuery({
+    queryKey: ['redpackets'],
+    queryFn: listRedPackets,
+    staleTime: 10000, // 10秒
+    refetchInterval: 30000, // 30秒自動刷新
+  })
+
+  // 轉換為顯示格式
+  const packets: PacketDisplay[] = (rawPackets || []).map(convertToDisplay)
+
+  // 搶紅包 mutation
+  const claimMutation = useMutation({
+    mutationFn: (packetId: string) => claimRedPacket(packetId),
+    onSuccess: (result, packetId) => {
+      // 刷新紅包列表和餘額
+      queryClient.invalidateQueries({ queryKey: ['redpackets'] })
+      queryClient.invalidateQueries({ queryKey: ['balance'] })
+      
+      // 顯示結果
+      setClaimAmount(result.amount)
+      setClaimMessage(result.message)
+      setShowResultModal(true)
+      setLoadingId(null)
+      
+      // 成功動畫
+      playSound('success')
+      triggerSuccessConfetti()
+    },
+    onError: (error: any) => {
+      setLoadingId(null)
+      playSound('error')
+      alert(error.message || '領取失敗')
+    }
+  })
+
+  const triggerSuccessConfetti = () => {
+    const end = Date.now() + 500
+    const colors = ['#bb0000', '#ffffff', '#fb923c', '#fbbf24']
+    const frame = () => {
+      confetti({
+        particleCount: 5,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: colors,
+        zIndex: 1000,
+      })
+      confetti({
+        particleCount: 5,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: colors,
+        zIndex: 1000,
+      })
+      if (Date.now() < end) {
+        requestAnimationFrame(frame)
+      }
+    }
+    frame()
+  }
 
   const filteredPackets = packets.filter((packet) => {
     if (activeTab === 'all') return true
@@ -49,14 +155,15 @@ export default function PacketsPage() {
     },
   }
 
-  const handleShare = async (e: React.MouseEvent, packet: MockRedPacket) => {
+  const handleShare = async (e: React.MouseEvent, packet: PacketDisplay) => {
     e.stopPropagation()
     playSound('click')
     
+    const shareUrl = `${window.location.origin}/claim/${packet.uuid}`
     const shareData = {
       title: '搶紅包',
       text: `🎁 搶 ${packet.senderName} 的紅包！"${packet.message}"`,
-      url: window.location.origin,
+      url: shareUrl,
     }
 
     try {
@@ -72,11 +179,12 @@ export default function PacketsPage() {
     }
   }
 
-  const handleGrab = (e: React.MouseEvent, packet: MockRedPacket) => {
-    if (packet.remainingQuantity <= 0) return
+  const handleGrab = async (e: React.MouseEvent, packet: PacketDisplay) => {
+    if (packet.remainingQuantity <= 0 || packet.status !== 'active') return
 
     e.stopPropagation()
     setLoadingId(packet.id)
+    setSelectedPacket(packet)
     playSound('grab')
 
     // 獲取按鈕位置用於噴花
@@ -93,42 +201,38 @@ export default function PacketsPage() {
       zIndex: 1000,
     })
 
-    // 模擬領取過程
-    setTimeout(() => {
-      const randomAmount = Math.random() * (packet.amount / packet.totalQuantity) + 0.1
-      setClaimAmount(randomAmount)
-      setSelectedPacket(packet)
-      setShowResultModal(true)
-      setLoadingId(null)
+    // 調用真實 API 領取紅包
+    claimMutation.mutate(packet.uuid || packet.id)
+  }
 
-      // 領取成功時再次噴花
-      setTimeout(() => {
-        const end = Date.now() + 500
-        const colors = ['#bb0000', '#ffffff', '#fb923c', '#fbbf24']
-        const frame = () => {
-          confetti({
-            particleCount: 5,
-            angle: 60,
-            spread: 55,
-            origin: { x: 0 },
-            colors: colors,
-            zIndex: 1000,
-          })
-          confetti({
-            particleCount: 5,
-            angle: 120,
-            spread: 55,
-            origin: { x: 1 },
-            colors: colors,
-            zIndex: 1000,
-          })
-          if (Date.now() < end) {
-            requestAnimationFrame(frame)
-          }
-        }
-        frame()
-      }, 100)
-    }, 1000)
+  // 加載狀態
+  if (isLoading) {
+    return (
+      <PageTransition>
+        <div className="h-full flex flex-col items-center justify-center p-6">
+          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-400 mt-4">載入中...</p>
+        </div>
+      </PageTransition>
+    )
+  }
+
+  // 錯誤狀態
+  if (error) {
+    return (
+      <PageTransition>
+        <div className="h-full flex flex-col items-center justify-center p-6">
+          <p className="text-red-400 mb-4">載入失敗</p>
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg"
+          >
+            <RefreshCw size={16} />
+            重試
+          </button>
+        </div>
+      </PageTransition>
+    )
   }
 
   return (
@@ -136,7 +240,7 @@ export default function PacketsPage() {
       <div className="h-full flex flex-col p-3 pb-24 gap-3 overflow-y-auto scrollbar-hide">
         {/* 標籤切換 */}
         <div className="flex gap-2 shrink-0">
-          {(['all', 'crypto', 'points'] as const).map((tab, i) => (
+          {(['all', 'crypto', 'points'] as const).map((tab) => (
             <motion.button
               key={tab}
               onClick={() => {
@@ -154,16 +258,38 @@ export default function PacketsPage() {
               {t(tab)}
             </motion.button>
           ))}
+          
+          {/* 刷新按鈕 */}
+          <motion.button
+            onClick={() => {
+              refetch()
+              playSound('click')
+            }}
+            className="ml-auto px-3 py-2 rounded-full bg-[#1C1C1E] text-gray-400 border border-white/5 hover:bg-[#2C2C2E]"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <RefreshCw size={16} />
+          </motion.button>
         </div>
+
+        {/* 空狀態 */}
+        {filteredPackets.length === 0 && (
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+            <Gift size={48} className="mb-4 opacity-50" />
+            <p>暫無紅包</p>
+            <p className="text-sm mt-2">發送一個紅包試試吧！</p>
+          </div>
+        )}
 
         {/* 紅包列表 */}
         <div className="flex-1 space-y-3">
           <AnimatePresence>
             {filteredPackets.map((packet, index) => {
               const style = typeConfig[packet.type] || typeConfig.ordinary
-              const TypeIcon = style.icon
+              const TypeIcon = packet.isBomb ? Bomb : style.icon
               const progressPercent = Math.max(0, (packet.remainingQuantity / packet.totalQuantity) * 100)
-              const isGrabbed = packet.remainingQuantity <= 0
+              const isGrabbed = packet.remainingQuantity <= 0 || packet.status !== 'active'
 
               return (
                 <motion.div
@@ -172,12 +298,17 @@ export default function PacketsPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="relative w-full p-3 bg-[#1C1C1E] border border-white/5 rounded-xl shadow-lg flex items-start justify-between overflow-hidden group shrink-0 transition-all duration-500"
+                  transition={{ delay: index * 0.05 }}
+                  className={`relative w-full p-3 bg-[#1C1C1E] border border-white/5 rounded-xl shadow-lg flex items-start justify-between overflow-hidden group shrink-0 transition-all duration-500 ${
+                    packet.isBomb ? 'border-red-500/30' : ''
+                  }`}
                 >
                   {/* 頂部漸變線 */}
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-red-500 opacity-20" />
-
+                  <div className={`absolute top-0 left-0 w-full h-1 ${
+                    packet.isBomb 
+                      ? 'bg-gradient-to-r from-red-500 to-orange-500' 
+                      : 'bg-gradient-to-r from-orange-500 to-red-500'
+                  } opacity-20`} />
 
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {/* 頭像 */}
@@ -206,7 +337,13 @@ export default function PacketsPage() {
                         >
                           Lv.{packet.senderLevel}
                         </span>
-                        {/* 游戏图标 - 移到等级后面 */}
+                        {/* 炸彈標識 */}
+                        {packet.isBomb && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+                            💣
+                          </span>
+                        )}
+                        {/* 游戏图标 */}
                         {packet.isFromGameGroup && (
                           <div className="flex items-center gap-1" title={t('game_group_packet')}>
                             <Gamepad2 size={14} className="text-purple-400" />
@@ -216,10 +353,20 @@ export default function PacketsPage() {
 
                       <span className="text-gray-400 text-xs mt-1 truncate">{packet.message}</span>
 
+                      {/* 金額和剩餘 */}
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-orange-400 text-xs font-bold">
+                          {packet.amount} {packet.currency}
+                        </span>
+                        <span className="text-gray-500 text-xs">
+                          {packet.remainingQuantity}/{packet.totalQuantity} 份
+                        </span>
+                      </div>
+
                       {/* 進度條 */}
-                      <div className="w-20 h-1 bg-gray-700 rounded-full mt-1.5 overflow-hidden shrink-0">
+                      <div className="w-24 h-1 bg-gray-700 rounded-full mt-1.5 overflow-hidden shrink-0">
                         <motion.div
-                          className="h-full bg-orange-500 rounded-full"
+                          className={`h-full rounded-full ${packet.isBomb ? 'bg-red-500' : 'bg-orange-500'}`}
                           initial={{ width: 0 }}
                           animate={{ width: `${progressPercent}%` }}
                           transition={{ duration: 0.8, ease: "easeOut" }}
@@ -264,9 +411,13 @@ export default function PacketsPage() {
                         </AnimatePresence>
                       </button>
 
-                      <div className="w-[90px] h-7 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center gap-1.5 backdrop-blur-sm shadow-inner px-2">
-                        <TypeIcon size={12} className={style.color} />
-                        <span className={`text-xs font-bold ${style.color}`}>{t(style.labelKey)}</span>
+                      <div className={`w-[90px] h-7 rounded-lg bg-black/40 border flex items-center justify-center gap-1.5 backdrop-blur-sm shadow-inner px-2 ${
+                        packet.isBomb ? 'border-red-500/30' : 'border-white/5'
+                      }`}>
+                        <TypeIcon size={12} className={packet.isBomb ? 'text-red-400' : style.color} />
+                        <span className={`text-xs font-bold ${packet.isBomb ? 'text-red-400' : style.color}`}>
+                          {packet.isBomb ? '炸彈' : t(style.labelKey)}
+                        </span>
                       </div>
                     </div>
 
@@ -279,6 +430,8 @@ export default function PacketsPage() {
                         ${
                           isGrabbed
                             ? 'bg-[#2C2C2E] text-gray-500 cursor-not-allowed border border-white/5'
+                            : packet.isBomb
+                            ? 'bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white active:scale-95 shadow-red-900/20'
                             : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white active:scale-95 shadow-orange-900/20'
                         }
                       `}
@@ -286,7 +439,7 @@ export default function PacketsPage() {
                       {loadingId === packet.id ? (
                         <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       ) : isGrabbed ? (
-                        t('grabbed')
+                        packet.status === 'expired' ? t('expired') : t('grabbed')
                       ) : (
                         t('grab')
                       )}
@@ -311,7 +464,7 @@ export default function PacketsPage() {
           currency={selectedPacket.currency}
           senderName={selectedPacket.senderName}
           senderLevel={selectedPacket.senderLevel}
-          message={selectedPacket.message}
+          message={claimMessage || selectedPacket.message}
           senderAvatar={selectedPacket.senderAvatar}
         />
       )}

@@ -108,7 +108,14 @@ export interface SendRedPacketParams {
 }
 
 export async function listRedPackets(): Promise<RedPacket[]> {
-  return api.get('/v1/redpackets')
+  try {
+    const result = await api.get('/v1/redpackets')
+    return Array.isArray(result) ? result : []
+  } catch (error: any) {
+    console.error('[listRedPackets] Error:', error)
+    // 返回空數組而不是拋出錯誤
+    return []
+  }
 }
 
 export async function getRedPacket(id: string): Promise<RedPacket> {
@@ -290,7 +297,8 @@ export async function getCheckInStatus(): Promise<{
 
 export async function createRechargeOrder(amount: number, currency: string): Promise<{
   order_id: string
-  payment_url: string
+  status: string
+  payment_url?: string
 }> {
   return api.post('/v1/wallet/recharge', { amount, currency })
 }
@@ -457,4 +465,60 @@ export async function getNotificationSettings(): Promise<NotificationSettings> {
 export async function updateNotificationSettings(settings: Partial<NotificationSettings>): Promise<NotificationSettings> {
   return api.put('/v1/messages/settings', settings)
 }
+
+// ============ 邀請相關 API ============
+
+export interface InviteStats {
+  invite_code: string
+  invite_count: number
+  invite_earnings: number
+  invite_link: string
+  next_milestone: number | null
+  next_milestone_reward: number | null
+  progress_to_next: number
+  invitees: {
+    tg_id: number
+    username: string | null
+    first_name: string | null
+    joined_at: string | null
+  }[]
+}
+
+export interface InviteMilestone {
+  target: number
+  reward: number
+  achieved: boolean
+}
+
+export async function getInviteStats(): Promise<InviteStats> {
+  try {
+    const result = await api.get('/v1/users/me/invite')
+    return result
+  } catch (error: any) {
+    // 如果 API 不存在，返回默認數據
+    console.error('[getInviteStats] Error:', error)
+    return {
+      invite_code: '',
+      invite_count: 0,
+      invite_earnings: 0,
+      invite_link: '',
+      next_milestone: 5,
+      next_milestone_reward: 5,
+      progress_to_next: 0,
+      invitees: []
+    }
+  }
+}
+
+export async function generateInviteCode(): Promise<{ invite_code: string; invite_link: string }> {
+  return api.post('/v1/users/me/invite/generate')
+}
+
+export const INVITE_MILESTONES: InviteMilestone[] = [
+  { target: 5, reward: 5, achieved: false },
+  { target: 10, reward: 15, achieved: false },
+  { target: 25, reward: 50, achieved: false },
+  { target: 50, reward: 150, achieved: false },
+  { target: 100, reward: 500, achieved: false },
+]
 

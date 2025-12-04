@@ -99,6 +99,20 @@ export function getInitData(): string {
 }
 
 /**
+ * 獲取初始化數據（別名，用於 WebSocket）
+ */
+export function getTelegramInitData(): string {
+  return window.Telegram?.WebApp?.initData ?? ''
+}
+
+/**
+ * 獲取 WebApp 實例（別名）
+ */
+export function getTelegramWebApp(): TelegramWebApp | null {
+  return window.Telegram?.WebApp ?? null
+}
+
+/**
  * 是否在 Telegram 環境
  */
 export function isTelegramEnv(): boolean {
