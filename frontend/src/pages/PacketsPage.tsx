@@ -98,7 +98,7 @@ export default function PacketsPage() {
     },
     onError: (error: any) => {
       setLoadingId(null)
-      playSound('error')
+      playSound('click')
       alert(error.message || '領取失敗')
     }
   })

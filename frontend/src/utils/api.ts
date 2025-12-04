@@ -68,6 +68,7 @@ export interface Balance {
   usdt: number
   ton: number
   stars: number
+  points?: number
 }
 
 export async function getUserProfile(): Promise<UserProfile> {
@@ -493,7 +494,7 @@ export interface InviteMilestone {
 export async function getInviteStats(): Promise<InviteStats> {
   try {
     const result = await api.get('/v1/users/me/invite')
-    return result
+    return result as InviteStats
   } catch (error: any) {
     // 如果 API 不存在，返回默認數據
     console.error('[getInviteStats] Error:', error)

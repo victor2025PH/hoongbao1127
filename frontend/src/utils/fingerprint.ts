@@ -42,6 +42,7 @@ async function initFingerprint(): Promise<any> {
     // 動態導入 FingerprintJS
     // 生產環境建議使用 FingerprintJS Pro 以獲得更高精確度
     try {
+      // @ts-ignore - 動態導入可能沒有類型聲明
       const FingerprintJS = await import('@fingerprintjs/fingerprintjs');
       fpPromise = FingerprintJS.load();
     } catch (e) {
@@ -68,7 +69,7 @@ export async function getDeviceFingerprint(): Promise<string> {
     if (fp) {
       const result = await fp.get();
       cachedFingerprint = result.visitorId;
-      return cachedFingerprint;
+      return cachedFingerprint!;
     }
   } catch (e) {
     console.warn('[Fingerprint] Error getting fingerprint:', e);

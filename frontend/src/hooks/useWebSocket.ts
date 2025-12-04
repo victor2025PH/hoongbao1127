@@ -25,8 +25,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   } = options
 
   const wsRef = useRef<WebSocket | null>(null)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const queryClient = useQueryClient()
   const [isConnected, setIsConnected] = useState(false)
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null)

@@ -279,32 +279,7 @@ export function shouldShowComplianceBanner(): boolean {
 
 // ==================== 類型擴展 ====================
 
-// 擴展 Window 類型以支持 Telegram WebApp
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp?: {
-        initData?: string;
-        platform?: string;
-        version?: string;
-        colorScheme?: string;
-        themeParams?: Record<string, string>;
-        isExpanded?: boolean;
-        viewportHeight?: number;
-        viewportStableHeight?: number;
-        MainButton?: any;
-        BackButton?: any;
-        HapticFeedback?: any;
-        close?: () => void;
-        expand?: () => void;
-        ready?: () => void;
-        sendData?: (data: string) => void;
-        openLink?: (url: string) => void;
-        openTelegramLink?: (url: string) => void;
-      };
-    };
-  }
-}
+// Window.Telegram 類型已在 telegram.ts 中定義，此處不再重複聲明
 
 export default {
   detectPlatform,
