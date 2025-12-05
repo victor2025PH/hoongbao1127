@@ -149,6 +149,14 @@ if HAS_V2_API:
 if HAS_ADMIN_SECURITY:
     app.include_router(admin_security.router, tags=["管理后台-安全中心"])
 
+# WebSocket 實時推送
+try:
+    from api.routers import websocket
+    app.include_router(websocket.router, tags=["WebSocket"])
+    logger.info("✅ WebSocket router registered")
+except ImportError as e:
+    logger.warning(f"WebSocket router not available: {e}")
+
 
 if __name__ == "__main__":
     import uvicorn

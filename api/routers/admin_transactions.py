@@ -466,6 +466,20 @@ async def approve_transaction(
     
     await db.commit()
     
+    # 發送通知
+    try:
+        from api.services.notification_service import notification_service
+        if transaction.type == "deposit":
+            await notification_service.notify_deposit_success(
+                db, user.id, transaction.amount, transaction.currency.value
+            )
+        elif transaction.type == "withdraw":
+            await notification_service.notify_withdraw_result(
+                db, user.id, transaction.amount, transaction.currency.value, approved=True
+            )
+    except Exception as e:
+        logger.error(f"Failed to send notification: {e}")
+    
     return {
         "success": True,
         "message": "交易已批准",
@@ -530,6 +544,16 @@ async def reject_transaction(
         raise HTTPException(status_code=400, detail="只能審核充值或提現交易")
     
     await db.commit()
+    
+    # 發送拒絕通知
+    try:
+        from api.services.notification_service import notification_service
+        await notification_service.notify_withdraw_result(
+            db, user.id, transaction.amount, transaction.currency.value, 
+            approved=False, reason=request.reason
+        )
+    except Exception as e:
+        logger.error(f"Failed to send notification: {e}")
     
     return {
         "success": True,

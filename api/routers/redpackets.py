@@ -409,7 +409,20 @@ async def claim_red_packet(
             balance_after=float(new_balance)
         )
     except Exception as e:
-        logger.error(f"Failed to send notification: {e}")
+        logger.error(f"Failed to send message notification: {e}")
+    
+    # WebSocket 實時推送
+    try:
+        from api.services.notification_service import notification_service
+        # 通知領取者（餘額變動）
+        await notification_service.notify_packet_claimed(
+            db, claimer.id, packet.sender_id, 
+            amount - penalty_amount if is_bomb else amount,
+            packet.currency.value, str(packet.id),
+            is_bomb=is_bomb, is_lucky=is_luckiest
+        )
+    except Exception as e:
+        logger.error(f"Failed to send WebSocket notification: {e}")
     
     # 構建消息
     if is_bomb:
