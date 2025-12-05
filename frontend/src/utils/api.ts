@@ -18,6 +18,15 @@ api.interceptors.request.use((config) => {
   const initData = getInitData()
   if (initData) {
     config.headers['X-Telegram-Init-Data'] = initData
+    // 開發環境下記錄認證信息（僅記錄前50個字符，避免洩露完整數據）
+    if (import.meta.env.DEV) {
+      console.log('[API Request]', config.url, 'with Telegram auth:', initData.substring(0, 50) + '...')
+    }
+  } else {
+    // 警告：沒有 Telegram initData
+    if (import.meta.env.DEV) {
+      console.warn('[API Request]', config.url, 'without Telegram auth - initData is empty')
+    }
   }
   return config
 })

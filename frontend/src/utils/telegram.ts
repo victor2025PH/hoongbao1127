@@ -71,7 +71,13 @@ export function initTelegram(): void {
       version: webApp.version,
       platform: webApp.platform,
       user: webApp.initDataUnsafe.user,
+      hasInitData: !!webApp.initData,
+      initDataLength: webApp.initData?.length || 0,
     })
+    // 如果 initData 为空，记录警告
+    if (!webApp.initData) {
+      console.warn('[Telegram] initData is empty - API requests will fail authentication')
+    }
   } catch (error) {
     console.error('[Telegram] Init error:', error)
   }
