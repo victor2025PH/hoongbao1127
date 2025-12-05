@@ -99,13 +99,14 @@ export interface RedPacket {
 }
 
 export interface SendRedPacketParams {
-  chat_id: number
+  chat_id: number | null  // null 表示发送到公开页面
   amount: number
   currency: string
   quantity: number
   type: 'random' | 'fixed'
   message?: string
   bomb_number?: number  // 0-9, 仅当 type='fixed' 时有效
+  chat_title?: string  // 群组/用户名称（可选）
 }
 
 export async function listRedPackets(): Promise<RedPacket[]> {
@@ -133,11 +134,13 @@ export async function sendRedPacket(params: SendRedPacketParams): Promise<RedPac
     total_amount: params.amount,
     total_count: params.quantity,
     message: params.message || '恭喜發財！🧧',
-    chat_id: params.chat_id,
+    // chat_id 為 null 時表示公開紅包，會顯示在公開紅包頁面
+    // chat_id 有值時表示私密紅包，只發送到指定群組或用戶
+    chat_id: params.chat_id ?? null,
   }
   
   // 如果提供了 chat_title，添加到請求中
-  if ('chat_title' in params && params.chat_title) {
+  if (params.chat_title) {
     requestBody.chat_title = params.chat_title
   }
   
@@ -147,6 +150,7 @@ export async function sendRedPacket(params: SendRedPacketParams): Promise<RedPac
   }
   
   console.log('[sendRedPacket] Sending request:', requestBody)
+  console.log('[sendRedPacket] 紅包類型:', params.chat_id === null ? '公開紅包' : '私密紅包')
   return api.post('/redpackets/create', requestBody)
 }
 
@@ -513,6 +517,41 @@ export async function getInviteStats(): Promise<InviteStats> {
 
 export async function generateInviteCode(): Promise<{ invite_code: string; invite_link: string }> {
   return api.post('/v1/users/me/invite/generate')
+}
+
+// 任務相關 API
+export interface TaskStatus {
+  task_type: string
+  task_name: string
+  task_description: string
+  completed: boolean
+  can_claim: boolean
+  progress: {
+    current: number
+    target: number
+    completed: boolean
+  }
+  reward_amount: number
+  reward_currency: string
+  red_packet_id?: string
+  completed_at?: string
+  claimed_at?: string
+}
+
+export async function getTaskStatus(): Promise<TaskStatus[]> {
+  return api.get('/v1/tasks/status')
+}
+
+export async function claimTaskPacket(taskType: string): Promise<{ success: boolean; amount: number; currency: string; message: string }> {
+  return api.post(`/v1/tasks/${taskType}/claim`)
+}
+
+export async function recordShare(): Promise<{ success: boolean; share_count: number; message: string }> {
+  return api.post('/v1/share/record')
+}
+
+export async function getRecommendedPackets(): Promise<RedPacket[]> {
+  return api.get('/v1/redpackets/recommended')
 }
 
 export const INVITE_MILESTONES: InviteMilestone[] = [

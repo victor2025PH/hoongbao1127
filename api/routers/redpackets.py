@@ -13,7 +13,10 @@ import random
 from loguru import logger
 
 from shared.database.connection import get_db_session
-from shared.database.models import User, RedPacket, RedPacketClaim, CurrencyType, RedPacketType, RedPacketStatus
+from shared.database.models import (
+    User, RedPacket, RedPacketClaim, CurrencyType, RedPacketType, RedPacketStatus,
+    RedPacketVisibility, RedPacketSource
+)
 from shared.config.settings import get_settings
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
@@ -136,6 +139,16 @@ async def create_red_packet(
     # 扣除餘額
     setattr(sender, balance_field, current_balance - Decimal(str(request.total_amount)))
     
+    # 判斷紅包可見性和來源類型
+    if request.chat_id is None:
+        # 公開紅包
+        visibility = RedPacketVisibility.PUBLIC
+        source_type = RedPacketSource.USER_PUBLIC
+    else:
+        # 私密紅包
+        visibility = RedPacketVisibility.PRIVATE
+        source_type = RedPacketSource.USER_PRIVATE
+    
     # 創建紅包
     packet = RedPacket(
         uuid=str(uuid.uuid4()),
@@ -145,15 +158,26 @@ async def create_red_packet(
         total_amount=Decimal(str(request.total_amount)),
         total_count=request.total_count,
         message=request.message,
-        chat_id=request.chat_id,
+        chat_id=request.chat_id,  # 公開紅包時為 NULL
         chat_title=request.chat_title,
         bomb_number=request.bomb_number if request.packet_type == RedPacketType.EQUAL else None,
         expires_at=datetime.utcnow() + timedelta(hours=24),
+        visibility=visibility,
+        source_type=source_type,
     )
     
     db.add(packet)
     await db.commit()
     await db.refresh(packet)
+    
+    # 融合任務系統：標記發紅包任務完成
+    try:
+        from api.routers.tasks import mark_task_complete_internal
+        # 異步調用任務完成標記（不阻塞創建響應）
+        import asyncio
+        asyncio.create_task(mark_task_complete_internal("send_packet", sender_tg_id, db))
+    except Exception as e:
+        logger.warning(f"Failed to mark send_packet task complete: {e}")
     
     # ⚠️ 注意：不再在 API 路由中發送紅包消息
     # 改由 Bot 處理器統一發送，避免重複發送
@@ -416,17 +440,39 @@ async def claim_red_packet(
 
 
 @router.get("/list", response_model=List[RedPacketResponse])
+@router.get("", response_model=List[RedPacketResponse])  # 兼容 /api/redpackets 路径
 async def list_red_packets(
     status: Optional[RedPacketStatus] = None,
     chat_id: Optional[int] = None,
     limit: int = 20,
     db: AsyncSession = Depends(get_db_session)
 ):
-    """獲取紅包列表"""
+    """
+    獲取公開紅包列表
+    
+    只返回公開紅包（chat_id 為 NULL），不包含發送到指定群組或用戶的私密紅包。
+    公開紅包包括：
+    - 用戶主動發送的公開隨機紅包
+    - 任務紅包（需要完成任務才能領取）
+    - 獎勵紅包（系統獎勵、活動獎勵等）
+    """
+    # 默认只返回活跃红包
+    if status is None:
+        status = RedPacketStatus.ACTIVE
+    
     query = select(RedPacket).order_by(RedPacket.created_at.desc()).limit(limit)
     
-    if status:
-        query = query.where(RedPacket.status == status)
+    # 只返回公開紅包（chat_id 為 NULL）
+    # 私密紅包（發送到指定群組或用戶的）不顯示在公開頁面
+    query = query.where(RedPacket.chat_id.is_(None))
+    
+    # 过滤状态
+    query = query.where(RedPacket.status == status)
+    
+    # 过滤过期红包
+    query = query.where(RedPacket.expires_at > datetime.utcnow())
+    
+    # 如果指定了 chat_id，則只返回該群組的公開紅包（通常不會用到）
     if chat_id:
         query = query.where(RedPacket.chat_id == chat_id)
     
@@ -434,4 +480,87 @@ async def list_red_packets(
     packets = result.scalars().all()
     
     return packets
+
+
+@router.get("/recommended", response_model=List[RedPacketResponse])
+async def get_recommended_packets(
+    tg_id: Optional[int] = Depends(get_tg_id_from_header),
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db_session)
+):
+    """獲取推薦紅包（根據用戶活躍度）"""
+    from sqlalchemy import case, func as sql_func
+    
+    # 計算用戶活躍度
+    activity_score = 0
+    if tg_id:
+        result = await db.execute(select(User).where(User.tg_id == tg_id))
+        user = result.scalar_one_or_none()
+        if user:
+            # 活躍度計算：簽到天數 + 邀請人數 + 搶包次數 + 發包次數
+            checkin_days = (user.total_checkin_count or 0) * 10
+            invite_count = (user.invite_count or 0) * 5
+            claim_count_result = await db.execute(
+                select(sql_func.count(RedPacketClaim.id)).where(RedPacketClaim.user_id == user.id)
+            )
+            claim_count = claim_count_result.scalar() or 0
+            send_count_result = await db.execute(
+                select(sql_func.count(RedPacket.id)).where(RedPacket.sender_id == user.id)
+            )
+            send_count = send_count_result.scalar() or 0
+            activity_score = checkin_days + invite_count + claim_count + send_count
+    
+    # 獲取推薦紅包（只返回公開紅包和任務紅包）
+    query = select(RedPacket).where(
+        RedPacket.status == RedPacketStatus.ACTIVE,
+        RedPacket.expires_at > datetime.utcnow(),
+        RedPacket.chat_id.is_(None)  # 只返回公開紅包
+    )
+    
+    # 根據活躍度排序
+    if activity_score > 50:
+        # 活躍用戶：優先推薦高價值紅包和任務紅包
+        query = query.order_by(
+            case(
+                (RedPacket.source_type == RedPacketSource.TASK, 0),
+                (RedPacket.source_type == RedPacketSource.REWARD, 1),
+                else_=2
+            ),
+            RedPacket.total_amount.desc(),
+            RedPacket.created_at.desc()
+        )
+    else:
+        # 新用戶：優先推薦任務紅包和公開紅包
+        query = query.order_by(
+            case(
+                (RedPacket.source_type == RedPacketSource.TASK, 0),
+                (RedPacket.visibility == RedPacketVisibility.PUBLIC, 1),
+                else_=2
+            ),
+            RedPacket.created_at.desc()
+        )
+    
+    result = await db.execute(query.limit(limit))
+    packets = result.scalars().all()
+    
+    # 轉換為響應格式
+    responses = []
+    for packet in packets:
+        responses.append(RedPacketResponse(
+            id=packet.id,
+            uuid=packet.uuid,
+            currency=packet.currency.value,
+            packet_type=packet.packet_type.value,
+            total_amount=float(packet.total_amount),
+            total_count=packet.total_count,
+            claimed_amount=float(packet.claimed_amount),
+            claimed_count=packet.claimed_count,
+            message=packet.message,
+            status=packet.status.value,
+            created_at=packet.created_at,
+            message_sent=False,
+            share_link=None
+        ))
+    
+    return responses
 

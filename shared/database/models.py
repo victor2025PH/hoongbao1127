@@ -52,6 +52,24 @@ class RedPacketType(str, enum.Enum):
     EXCLUSIVE = "exclusive"  # 專屬
 
 
+class RedPacketVisibility(str, enum.Enum):
+    """紅包可見性"""
+    PRIVATE = "private"    # 私密紅包（發送到指定群組或用戶）
+    PUBLIC = "public"      # 公開紅包（用戶發送的公開紅包）
+    TASK = "task"          # 任務紅包
+    REWARD = "reward"      # 獎勵紅包
+    SYSTEM = "system"      # 系統紅包
+
+
+class RedPacketSource(str, enum.Enum):
+    """紅包來源"""
+    USER_PUBLIC = "user_public"      # 用戶發送的公開紅包
+    USER_PRIVATE = "user_private"    # 用戶發送的私密紅包
+    TASK = "task"                    # 任務紅包
+    REWARD = "reward"                # 獎勵紅包
+    SYSTEM = "system"                # 系統紅包
+
+
 class RedPacketStatus(str, enum.Enum):
     """紅包狀態"""
     ACTIVE = "active"
@@ -109,6 +127,7 @@ class User(Base):
     claims = relationship("RedPacketClaim", back_populates="user")
     messages = relationship("Message", back_populates="user")
     notification_settings = relationship("UserNotificationSettings", back_populates="user", uselist=False)
+    task_completions = relationship("TaskCompletion", back_populates="user", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index("ix_users_invite_code", "invite_code"),
@@ -149,6 +168,13 @@ class RedPacket(Base):
     status = Column(Enum(RedPacketStatus), default=RedPacketStatus.ACTIVE)
     expires_at = Column(DateTime, nullable=True)
     
+    # 任務紅包相關字段
+    visibility = Column(Enum(RedPacketVisibility), default=RedPacketVisibility.PRIVATE)  # 可見性
+    source_type = Column(Enum(RedPacketSource), default=RedPacketSource.USER_PRIVATE)  # 來源類型
+    task_type = Column(String(50), nullable=True)  # 任務類型：checkin, invite, share, claim, send等
+    task_requirement = Column(JSON, nullable=True)  # 任務要求（JSON格式）
+    task_completed_users = Column(JSON, default=list)  # 已完成任務的用戶ID列表
+    
     # 時間戳
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
@@ -156,6 +182,7 @@ class RedPacket(Base):
     
     # 關聯
     claims = relationship("RedPacketClaim", back_populates="red_packet")
+    task_completions = relationship("TaskCompletion", back_populates="red_packet", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index("ix_red_packets_status", "status"),
@@ -194,6 +221,53 @@ class RedPacketClaim(Base):
         Index("ix_claims_user_packet", "user_id", "red_packet_id"),
         Index("ix_claims_user_created", "user_id", "claimed_at"),
         Index("ix_claims_packet_created", "red_packet_id", "claimed_at"),
+    )
+
+
+class TaskCompletion(Base):
+    """任務完成記錄"""
+    __tablename__ = "task_completions"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    
+    # 關聯
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user = relationship("User", back_populates="task_completions")
+    red_packet_id = Column(Integer, ForeignKey("red_packets.id"), nullable=False)
+    red_packet = relationship("RedPacket", back_populates="task_completions")
+    
+    # 任務信息
+    task_type = Column(String(50), nullable=False)  # checkin, invite, share, claim, send等
+    completed_at = Column(DateTime, default=datetime.utcnow)  # 任務完成時間
+    claimed_at = Column(DateTime, nullable=True)  # 領取紅包的時間
+    reward_amount = Column(Numeric(20, 8), nullable=True)  # 實際領取的金額
+    
+    __table_args__ = (
+        Index("ix_task_completions_user_id", "user_id"),
+        Index("ix_task_completions_red_packet_id", "red_packet_id"),
+        Index("ix_task_completions_task_type", "task_type"),
+        Index("ix_task_completions_user_task", "user_id", "task_type"),
+    )
+
+
+class DailyTask(Base):
+    """每日任務配置"""
+    __tablename__ = "daily_tasks"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_type = Column(String(50), unique=True, nullable=False)  # checkin, invite, share等
+    task_name = Column(String(100), nullable=False)  # 任務名稱
+    task_description = Column(String(500), nullable=False)  # 任務描述
+    requirement = Column(JSON, nullable=False)  # 任務要求（JSON格式）
+    reward_amount = Column(Numeric(20, 8), nullable=False)  # 獎勵金額
+    reward_currency = Column(Enum(CurrencyType), default=CurrencyType.USDT)
+    is_active = Column(Boolean, default=True)  # 是否啟用
+    sort_order = Column(Integer, default=0)  # 排序
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        Index("ix_daily_tasks_task_type", "task_type"),
+        Index("ix_daily_tasks_is_active", "is_active"),
     )
 
 

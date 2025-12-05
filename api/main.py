@@ -15,7 +15,7 @@ from loguru import logger
 
 from shared.config.settings import get_settings
 from shared.database.connection import init_db
-from api.routers import auth, users, redpackets, wallet, checkin, chats, messages, exchange
+from api.routers import auth, users, redpackets, wallet, checkin, chats, messages, exchange, tasks, share
 from api.routers import admin_telegram, admin_reports, admin_auth, admin_dashboard, admin_users, admin_redpackets, admin_transactions, admin_checkin, admin_invite
 
 # 安全中心路由
@@ -119,9 +119,12 @@ app.include_router(auth.router, prefix="/api/auth", tags=["認證"])
 app.include_router(users.router, prefix="/api/users", tags=["用戶"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["用戶-v1"])  # 兼容 miniapp 的 /v1/users 路径
 app.include_router(redpackets.router, prefix="/api/redpackets", tags=["紅包"])
+app.include_router(redpackets.router, prefix="/api/v1/redpackets", tags=["紅包-v1"])  # 兼容 miniapp 的 /v1/redpackets 路径
 app.include_router(wallet.router, prefix="/api/wallet", tags=["錢包"])
 app.include_router(exchange.router, prefix="/api", tags=["兌換"])
 app.include_router(checkin.router, prefix="/api/checkin", tags=["簽到"])
+app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["任務"])
+app.include_router(share.router, prefix="/api/v1/share", tags=["分享"])
 app.include_router(chats.router, prefix="/api/v1/chats", tags=["群組"])
 app.include_router(messages.router, prefix="/api/v1/messages", tags=["消息"])
 

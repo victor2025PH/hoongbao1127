@@ -92,6 +92,15 @@ async def do_checkin(
     
     await db.commit()
     
+    # 融合任務系統：標記簽到任務完成
+    try:
+        from api.routers.tasks import mark_task_complete_internal
+        # 異步調用任務完成標記（不阻塞簽到響應）
+        import asyncio
+        asyncio.create_task(mark_task_complete_internal("checkin", user.tg_id, db))
+    except Exception as e:
+        logger.warning(f"Failed to mark checkin task complete: {e}")
+    
     return CheckinResponse(
         success=True,
         day=new_streak,

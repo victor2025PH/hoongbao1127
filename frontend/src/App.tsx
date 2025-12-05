@@ -21,6 +21,7 @@ const Recharge = lazy(() => import('./pages/Recharge'))
 const Withdraw = lazy(() => import('./pages/Withdraw'))
 const ExchangePage = lazy(() => import('./pages/ExchangePage'))
 const LuckyWheelPage = lazy(() => import('./pages/LuckyWheelPage'))
+const TasksPage = lazy(() => import('./pages/TasksPage'))
 
 export default function App() {
   const [alertState, setAlertState] = useState<{
@@ -128,6 +129,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<WalletPage />} />
               <Route path="/packets" element={<PacketsPage />} />
+              <Route path="/tasks" element={<TasksPage />} />
               <Route path="/send" element={<SendRedPacket />} />
               <Route path="/earn" element={<EarnPage />} />
               <Route path="/game" element={<GamePage />} />

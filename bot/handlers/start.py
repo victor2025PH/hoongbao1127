@@ -116,6 +116,78 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.info(f"User {user.id} invited by {inviter.tg_id}")
                 log_user_action(user.id, "invited", {"inviter_id": inviter.tg_id, "invite_code": invite_code})
                 is_new_user = False  # 更新狀態
+                
+                # 融合任務系統：標記邀請任務完成（異步調用API）
+                try:
+                    import aiohttp
+                    import asyncio
+                    
+                    # 獲取API URL（從MINIAPP_URL推導或使用默認值）
+                    api_url = getattr(settings, 'API_URL', None) or settings.MINIAPP_URL.replace('/frontend', '').replace('/dist', '')
+                    if not api_url.startswith('http'):
+                        api_url = f"http://127.0.0.1:8080"
+                    
+                    async def mark_invite_task_complete():
+                        try:
+                            url = f"{api_url}/api/v1/tasks/invite_friend/complete"
+                            headers = {"Content-Type": "application/json"}
+                            async with aiohttp.ClientSession() as session:
+                                async with session.post(
+                                    url,
+                                    headers=headers,
+                                    json={"tg_id": inviter.tg_id},
+                                    timeout=aiohttp.ClientTimeout(total=5)
+                                ) as resp:
+                                    if resp.status == 200:
+                                        logger.info(f"Marked invite task complete for user {inviter.tg_id}")
+                                    else:
+                                        logger.warning(f"Failed to mark invite task: {resp.status}")
+                        except Exception as e:
+                            logger.warning(f"Failed to mark invite task complete: {e}")
+                    
+                    # 異步執行，不阻塞
+                    asyncio.create_task(mark_invite_task_complete())
+                    
+                    # 檢查成就任務（邀請5人、10人等）
+                    invite_count = inviter.invite_count
+                    if invite_count == 5:
+                        async def mark_achievement_task(task_type):
+                            try:
+                                url = f"{api_url}/api/v1/tasks/{task_type}/complete"
+                                headers = {"Content-Type": "application/json"}
+                                async with aiohttp.ClientSession() as session:
+                                    async with session.post(
+                                        url,
+                                        headers=headers,
+                                        json={"tg_id": inviter.tg_id},
+                                        timeout=aiohttp.ClientTimeout(total=5)
+                                    ) as resp:
+                                        if resp.status == 200:
+                                            logger.info(f"Marked {task_type} achievement for user {inviter.tg_id}")
+                            except Exception as e:
+                                logger.warning(f"Failed to mark {task_type} achievement: {e}")
+                        
+                        asyncio.create_task(mark_achievement_task("invite_5"))
+                    elif invite_count == 10:
+                        async def mark_achievement_task(task_type):
+                            try:
+                                url = f"{api_url}/api/v1/tasks/{task_type}/complete"
+                                headers = {"Content-Type": "application/json"}
+                                async with aiohttp.ClientSession() as session:
+                                    async with session.post(
+                                        url,
+                                        headers=headers,
+                                        json={"tg_id": inviter.tg_id},
+                                        timeout=aiohttp.ClientTimeout(total=5)
+                                    ) as resp:
+                                        if resp.status == 200:
+                                            logger.info(f"Marked {task_type} achievement for user {inviter.tg_id}")
+                            except Exception as e:
+                                logger.warning(f"Failed to mark {task_type} achievement: {e}")
+                        
+                        asyncio.create_task(mark_achievement_task("invite_10"))
+                except Exception as e:
+                    logger.warning(f"Failed to mark invite task: {e}")
         
         # 記錄用戶操作（在會話內完成）
         log_user_action(user.id, "start", {"is_new": is_new_user})
