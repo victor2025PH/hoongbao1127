@@ -18,7 +18,16 @@ git pull origin master || git pull origin main
 
 # 2. 運行數據庫遷移
 echo "[2/5] 運行數據庫遷移..."
-python3 migrations/add_task_redpacket_system.py || echo "⚠️ 遷移可能已執行過"
+cd /opt/luckyred/api
+if [ -d ".venv" ]; then
+    source .venv/bin/activate
+    cd /opt/luckyred
+    python3 migrations/add_task_redpacket_system.py || echo "⚠️ 遷移可能已執行過"
+    deactivate
+else
+    cd /opt/luckyred
+    python3 migrations/add_task_redpacket_system.py || echo "⚠️ 遷移可能已執行過"
+fi
 
 # 3. 安裝API依賴（如果有新依賴）
 echo "[3/5] 檢查API依賴..."

@@ -34,7 +34,27 @@ log_info "✓ 代码已更新"
 
 # 2. 运行数据库迁移
 log_info "[2/6] 运行数据库迁移..."
-python3 migrations/add_task_redpacket_system.py
+# 使用API虚拟环境运行迁移
+cd "$PROJECT_DIR/api"
+if [ -d ".venv" ]; then
+    source .venv/bin/activate
+    cd "$PROJECT_DIR"
+    python3 migrations/add_task_redpacket_system.py
+    deactivate
+else
+    # 如果没有虚拟环境，尝试使用系统Python（需要先安装依赖）
+    cd "$PROJECT_DIR"
+    python3 migrations/add_task_redpacket_system.py || {
+        log_warn "迁移失败，尝试安装依赖..."
+        cd "$PROJECT_DIR/api"
+        python3 -m venv .venv
+        source .venv/bin/activate
+        pip install -q sqlalchemy psycopg2-binary
+        cd "$PROJECT_DIR"
+        python3 migrations/add_task_redpacket_system.py
+        deactivate
+    }
+fi
 log_info "✓ 数据库迁移完成"
 
 # 3. 安装API依赖
@@ -160,8 +180,11 @@ fi
 
 # 测试7: 检查数据库表
 log_test "[7/8] 检查数据库表..."
-cd "$PROJECT_DIR"
-python3 << EOF
+cd "$PROJECT_DIR/api"
+if [ -d ".venv" ]; then
+    source .venv/bin/activate
+    cd "$PROJECT_DIR"
+    python3 << EOF
 import sys
 sys.path.insert(0, '.')
 from shared.database.connection import sync_engine
@@ -205,6 +228,10 @@ except Exception as e:
     print(f"✗ 数据库检查失败: {e}")
     sys.exit(1)
 EOF
+    deactivate
+else
+    log_warn "⚠ 虚拟环境不存在，跳过数据库检查"
+fi
 
 if [ $? -eq 0 ]; then
     log_info "✓ 数据库表检查通过"
