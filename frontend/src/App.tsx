@@ -22,6 +22,7 @@ const Withdraw = lazy(() => import('./pages/Withdraw'))
 const ExchangePage = lazy(() => import('./pages/ExchangePage'))
 const LuckyWheelPage = lazy(() => import('./pages/LuckyWheelPage'))
 const TasksPage = lazy(() => import('./pages/TasksPage'))
+const DebugPage = lazy(() => import('./pages/DebugPage'))
 
 export default function App() {
   const [alertState, setAlertState] = useState<{
@@ -138,6 +139,7 @@ export default function App() {
               <Route path="/withdraw" element={<Withdraw />} />
               <Route path="/exchange" element={<ExchangePage />} />
               <Route path="/lucky-wheel" element={<LuckyWheelPage />} />
+              <Route path="/debug" element={<DebugPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
