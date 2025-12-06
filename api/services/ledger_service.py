@@ -272,11 +272,10 @@ class LedgerService:
             {
                 'id': entry.id,
                 'amount': str(entry.amount),
-                'currency': entry.currency,
-                'type': entry.type,
-                'balance_before': str(entry.balance_before),
+                'currency': entry.currency.value,
+                'type': entry.category.value,
                 'balance_after': str(entry.balance_after),
-                'description': entry.description,
+                'description': entry.note if entry.note else None,
                 'created_at': entry.created_at.isoformat()
             }
             for entry in entries
