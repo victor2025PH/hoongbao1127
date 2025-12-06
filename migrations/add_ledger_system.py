@@ -36,6 +36,7 @@ def upgrade():
         table_exists = 'ledger_entries' in inspector.get_table_names()
         
         if not table_exists:
+            # 创建新表
             conn.execute(text(f"""
                 CREATE TABLE ledger_entries (
                     id {id_type},
@@ -56,21 +57,38 @@ def upgrade():
             conn.commit()
             print("✅ Created ledger_entries table")
         else:
-            # 表已存在，检查列是否存在
+            # 表已存在，检查并添加缺失的列
             columns = [col['name'] for col in inspector.get_columns('ledger_entries')]
-            if 'related_type' not in columns:
-                print("⚠️ Table exists but missing columns, attempting to add...")
-                try:
-                    conn.execute(text("ALTER TABLE ledger_entries ADD COLUMN related_type VARCHAR(50);"))
-                    conn.commit()
-                except Exception as e:
-                    print(f"⚠️ Could not add related_type column: {e}")
-            if 'related_id' not in columns:
-                try:
-                    conn.execute(text(f"ALTER TABLE ledger_entries ADD COLUMN related_id {bigint_type};"))
-                    conn.commit()
-                except Exception as e:
-                    print(f"⚠️ Could not add related_id column: {e}")
+            print(f"📋 Existing columns: {columns}")
+            
+            required_columns = {
+                'related_type': 'VARCHAR(50)',
+                'related_id': bigint_type,
+                'balance_before': decimal_type,
+                'balance_after': decimal_type,
+                'metadata': json_type,
+                'description': 'TEXT',
+                'created_at': timestamp_type,
+                'created_by': 'VARCHAR(50)'
+            }
+            
+            # 检查type列（可能是保留字）
+            type_col_name = type_column.replace('"', '')
+            if type_col_name not in columns and 'type' not in columns:
+                required_columns[type_col_name] = 'VARCHAR(50)'
+            
+            for col_name, col_type in required_columns.items():
+                if col_name not in columns:
+                    print(f"➕ Adding missing column: {col_name}")
+                    try:
+                        if col_name == type_col_name and is_sqlite_db:
+                            # SQLite中type是保留字，需要特殊处理
+                            conn.execute(text(f'ALTER TABLE ledger_entries ADD COLUMN "{col_name}" {col_type};'))
+                        else:
+                            conn.execute(text(f"ALTER TABLE ledger_entries ADD COLUMN {col_name} {col_type};"))
+                        conn.commit()
+                    except Exception as e:
+                        print(f"⚠️ Could not add column {col_name}: {e}")
         
         # 2. 创建user_balances表（余额快照）
         conn.execute(text(f"""
