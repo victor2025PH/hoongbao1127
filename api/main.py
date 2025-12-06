@@ -138,6 +138,13 @@ app.include_router(share.router, prefix="/api/v1/share", tags=["分享"])
 app.include_router(chats.router, prefix="/api/v1/chats", tags=["群組"])
 app.include_router(messages.router, prefix="/api/v1/messages", tags=["消息"])
 
+# 支付路由
+try:
+    from api.routers import payment
+    app.include_router(payment.router, prefix="/api/v1", tags=["支付"])
+except ImportError as e:
+    logger.warning(f"Payment routes not available: {e}")
+
 # 管理后台路由
 app.include_router(admin_auth.router, tags=["管理后台-认证"])
 app.include_router(admin_dashboard.router, tags=["管理后台-仪表盘"])

@@ -168,8 +168,10 @@ async def create_red_packet(
         source_type = RedPacketSource.USER_PRIVATE
     
     # 創建紅包
+    packet_uuid = str(uuid.uuid4())
+    expires_at = datetime.utcnow() + timedelta(hours=24)
     packet = RedPacket(
-        uuid=str(uuid.uuid4()),
+        uuid=packet_uuid,
         sender_id=sender.id,
         currency=request.currency,
         packet_type=request.packet_type,
@@ -179,7 +181,7 @@ async def create_red_packet(
         chat_id=request.chat_id,  # 公開紅包時為 NULL
         chat_title=request.chat_title,
         bomb_number=request.bomb_number if request.packet_type == RedPacketType.EQUAL else None,
-        expires_at=datetime.utcnow() + timedelta(hours=24),
+        expires_at=expires_at,
         visibility=visibility,
         source_type=source_type,
     )
@@ -187,6 +189,28 @@ async def create_red_packet(
     db.add(packet)
     await db.commit()
     await db.refresh(packet)
+    
+    # 初始化红包到Redis（用于高并发抢红包）
+    try:
+        from api.services.redis_claim_service import RedisClaimService
+        await RedisClaimService.init_packet(
+            packet_uuid=packet_uuid,
+            packet_data={
+                'sender_id': sender.id,
+                'currency': request.currency.value,
+                'packet_type': request.packet_type.value,
+                'total_amount': float(request.total_amount),
+                'total_count': request.total_count,
+                'claimed_amount': 0,
+                'claimed_count': 0,
+                'status': 'ACTIVE',
+                'expires_at': int(expires_at.timestamp()),
+                'bomb_number': request.bomb_number if request.packet_type == RedPacketType.EQUAL else None,
+            }
+        )
+        logger.info(f"✅ 红包已初始化到Redis: {packet_uuid}")
+    except Exception as e:
+        logger.warning(f"⚠️ 初始化Redis红包失败（将使用数据库模式）: {e}")
     
     # 融合任務系統：標記發紅包任務完成（使用新的數據庫會話）
     try:
