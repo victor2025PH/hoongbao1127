@@ -2,7 +2,6 @@
 Redis高并发抢红包服务
 使用Redis + Lua脚本处理10k+并发请求，防止超卖
 """
-import redis
 import json
 from decimal import Decimal
 from typing import Optional, Dict, Any, Tuple
@@ -10,12 +9,22 @@ from loguru import logger
 import uuid as uuid_lib
 from datetime import datetime
 
-# Redis连接（单例模式）
+# Redis连接（单例模式，可选）
 _redis_client = None
+_redis_available = False
+
+try:
+    import redis
+    _redis_available = True
+except ImportError:
+    logger.warning("⚠️ redis模块未安装，Redis抢红包功能将不可用（将使用数据库模式）")
 
 def get_redis_client():
-    """获取Redis客户端（单例）"""
+    """获取Redis客户端（单例，可选）"""
     global _redis_client
+    if not _redis_available:
+        return None
+    
     if _redis_client is None:
         try:
             _redis_client = redis.Redis(

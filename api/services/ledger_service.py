@@ -8,25 +8,41 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime
 import json
-import redis
 from loguru import logger
 
 from shared.database.models import User, UserBalance
 from shared.database.connection import get_db_session
 
-# Redis连接（单例模式）
+# Redis连接（单例模式，可选）
 _redis_client = None
+_redis_available = False
+
+try:
+    import redis
+    _redis_available = True
+except ImportError:
+    logger.warning("⚠️ redis模块未安装，将使用数据库模式（不影响基本功能）")
 
 def get_redis_client():
-    """获取Redis客户端（单例）"""
+    """获取Redis客户端（单例，可选）"""
     global _redis_client
+    if not _redis_available:
+        return None
+    
     if _redis_client is None:
-        _redis_client = redis.Redis(
-            host='localhost',
-            port=6379,
-            db=0,
-            decode_responses=True
-        )
+        try:
+            _redis_client = redis.Redis(
+                host='localhost',
+                port=6379,
+                db=0,
+                decode_responses=True
+            )
+            # 测试连接
+            _redis_client.ping()
+            logger.info("✅ Redis连接成功")
+        except Exception as e:
+            logger.warning(f"⚠️ Redis连接失败: {e}，将使用数据库模式")
+            _redis_client = None
     return _redis_client
 
 
