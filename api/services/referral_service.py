@@ -222,24 +222,50 @@ class ReferralService:
         total_reward = stats[0] or Decimal('0')
         reward_count = stats[1] or 0
         
-        # 按层级统计
-        tier1_reward_result = await db.execute(
-            select(func.sum(LedgerEntry.amount)).where(
-                LedgerEntry.user_id == user_id,
-                LedgerEntry.category == LedgerCategory.REFERRAL_BONUS,
-                LedgerEntry.meta_data['tier'].astext == '1'
-            )
-        )
-        tier1_reward = tier1_reward_result.scalar_one_or_none() or Decimal('0')
+        # 按层级统计（兼容SQLite和PostgreSQL）
+        # SQLite使用JSON_EXTRACT，PostgreSQL使用->>或astext
+        from shared.config.settings import get_settings
+        settings = get_settings()
+        is_sqlite = 'sqlite' in settings.DATABASE_URL.lower()
         
-        tier2_reward_result = await db.execute(
-            select(func.sum(LedgerEntry.amount)).where(
-                LedgerEntry.user_id == user_id,
-                LedgerEntry.category == LedgerCategory.REFERRAL_BONUS,
-                LedgerEntry.meta_data['tier'].astext == '2'
+        if is_sqlite:
+            # SQLite JSON查询
+            tier1_reward_result = await db.execute(
+                select(func.sum(LedgerEntry.amount)).where(
+                    LedgerEntry.user_id == user_id,
+                    LedgerEntry.category == LedgerCategory.REFERRAL_BONUS,
+                    func.json_extract(LedgerEntry.meta_data, '$.tier') == '1'
+                )
             )
-        )
-        tier2_reward = tier2_reward_result.scalar_one_or_none() or Decimal('0')
+            tier1_reward = tier1_reward_result.scalar_one_or_none() or Decimal('0')
+            
+            tier2_reward_result = await db.execute(
+                select(func.sum(LedgerEntry.amount)).where(
+                    LedgerEntry.user_id == user_id,
+                    LedgerEntry.category == LedgerCategory.REFERRAL_BONUS,
+                    func.json_extract(LedgerEntry.meta_data, '$.tier') == '2'
+                )
+            )
+            tier2_reward = tier2_reward_result.scalar_one_or_none() or Decimal('0')
+        else:
+            # PostgreSQL JSON查询
+            tier1_reward_result = await db.execute(
+                select(func.sum(LedgerEntry.amount)).where(
+                    LedgerEntry.user_id == user_id,
+                    LedgerEntry.category == LedgerCategory.REFERRAL_BONUS,
+                    LedgerEntry.meta_data['tier'].astext == '1'
+                )
+            )
+            tier1_reward = tier1_reward_result.scalar_one_or_none() or Decimal('0')
+            
+            tier2_reward_result = await db.execute(
+                select(func.sum(LedgerEntry.amount)).where(
+                    LedgerEntry.user_id == user_id,
+                    LedgerEntry.category == LedgerCategory.REFERRAL_BONUS,
+                    LedgerEntry.meta_data['tier'].astext == '2'
+                )
+            )
+            tier2_reward = tier2_reward_result.scalar_one_or_none() or Decimal('0')
         
         return {
             'tier1_count': tier1_count,
