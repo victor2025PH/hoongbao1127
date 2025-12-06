@@ -9,12 +9,16 @@ import { useSound } from '../hooks/useSound'
 import TelegramStar from '../components/TelegramStar'
 import PageTransition from '../components/PageTransition'
 import EnergyFortunePanel from '../components/EnergyFortunePanel'
+import { getPlatformRules } from '../utils/platform'
 
 export default function WalletPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { playSound } = useSound()
   const controls = useAnimation()
+  
+  // 获取平台规则（用于合规UI）
+  const platformRules = getPlatformRules()
 
   const { data: balance } = useQuery({
     queryKey: ['balance'],
@@ -410,28 +414,34 @@ export default function WalletPage() {
         </motion.div>
 
         {/* 操作按鈕行 */}
-        <div className="grid grid-cols-5 gap-2 shrink-0 relative z-20 mt-2">
-          {/* 充值按钮 - 绿色渐变 */}
-          <ActionButton 
-            icon={CreditCard} 
-            label={t('recharge')} 
-            color="text-green-300" 
-            bgGradient="from-green-500/20 to-emerald-500/20"
-            borderColor="border-green-500/30"
-            glowColor="shadow-green-500/20"
-            onClick={() => { playSound('click'); navigate('/recharge') }} 
-          />
+        <div className={`grid gap-2 shrink-0 relative z-20 mt-2 ${
+          platformRules.hideFinancialFeatures ? 'grid-cols-3' : 'grid-cols-5'
+        }`}>
+          {/* 充值按钮 - 绿色渐变（iOS隐藏） */}
+          {platformRules.showDeposit && (
+            <ActionButton 
+              icon={CreditCard} 
+              label={t('recharge')} 
+              color="text-green-300" 
+              bgGradient="from-green-500/20 to-emerald-500/20"
+              borderColor="border-green-500/30"
+              glowColor="shadow-green-500/20"
+              onClick={() => { playSound('click'); navigate('/recharge') }} 
+            />
+          )}
           
-          {/* 提现按钮 - 蓝色渐变 */}
-          <ActionButton 
-            icon={ArrowUpRight} 
-            label={t('withdraw')} 
-            color="text-blue-300" 
-            bgGradient="from-blue-500/20 to-cyan-500/20"
-            borderColor="border-blue-500/30"
-            glowColor="shadow-blue-500/20"
-            onClick={() => { playSound('click'); navigate('/withdraw') }} 
-          />
+          {/* 提现按钮 - 蓝色渐变（iOS隐藏） */}
+          {platformRules.showWithdraw && (
+            <ActionButton 
+              icon={ArrowUpRight} 
+              label={t('withdraw')} 
+              color="text-blue-300" 
+              bgGradient="from-blue-500/20 to-cyan-500/20"
+              borderColor="border-blue-500/30"
+              glowColor="shadow-blue-500/20"
+              onClick={() => { playSound('click'); navigate('/withdraw') }} 
+            />
+          )}
           
           {/* 遊戲按鈕（帶特效） */}
           <div
@@ -502,16 +512,18 @@ export default function WalletPage() {
             onClick={() => { playSound('click'); navigate('/packets') }} 
           />
           
-          {/* 兑换按钮 - 紫色渐变 */}
-          <ActionButton 
-            icon={ArrowLeftRight} 
-            label={t('exchange')} 
-            color="text-purple-300" 
-            bgGradient="from-purple-500/20 to-pink-500/20"
-            borderColor="border-purple-500/30"
-            glowColor="shadow-purple-500/20"
-            onClick={() => { playSound('click'); navigate('/exchange') }} 
-          />
+          {/* 兑换按钮 - 紫色渐变（iOS隐藏） */}
+          {platformRules.showExchange && (
+            <ActionButton 
+              icon={ArrowLeftRight} 
+              label={t('exchange')} 
+              color="text-purple-300" 
+              bgGradient="from-purple-500/20 to-pink-500/20"
+              borderColor="border-purple-500/30"
+              glowColor="shadow-purple-500/20"
+              onClick={() => { playSound('click'); navigate('/exchange') }} 
+            />
+          )}
         </div>
 
         {/* 雷達掃描器（全寬，可拉伸） */}

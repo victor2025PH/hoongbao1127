@@ -136,6 +136,30 @@ async def get_referral_stats(
     return stats
 
 
+@router.get("/me/referral/tree")
+async def get_referral_tree(
+    tg_id: Optional[int] = Depends(get_tg_id_from_header),
+    db: AsyncSession = Depends(get_db_session),
+    max_depth: int = Query(2, ge=1, le=3)
+):
+    """
+    获取推荐树
+    """
+    if not tg_id:
+        raise HTTPException(status_code=401, detail="Telegram user ID is required")
+    
+    result = await db.execute(select(User).where(User.tg_id == tg_id))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    from api.services.referral_service import ReferralService
+    tree = await ReferralService.get_referral_tree(db, user.id, max_depth=max_depth)
+    
+    return tree
+
+
 # 管理后台用户列表API
 @router.get("/list")
 async def list_users(

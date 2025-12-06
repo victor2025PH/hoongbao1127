@@ -3,17 +3,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, Star, Sparkles, UserPlus, Trophy, Copy, CheckCircle, Users, Coins, Gift, ChevronRight, Share2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from '../providers/I18nProvider'
-import { checkIn, getCheckInStatus, getInviteStats, INVITE_MILESTONES, type InviteStats } from '../utils/api'
+import { checkIn, getCheckInStatus, getInviteStats, INVITE_MILESTONES, type InviteStats, getReferralStats, getReferralTree } from '../utils/api'
 import { haptic, showAlert, getTelegram } from '../utils/telegram'
 import { useSound } from '../hooks/useSound'
 import TelegramStar from '../components/TelegramStar'
 import PageTransition from '../components/PageTransition'
+import ReferralTree from '../components/ReferralTree'
 
 export default function EarnPage() {
   const { t } = useTranslation()
   const { playSound } = useSound()
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState<'checkin' | 'invite'>('checkin')
+  const [activeTab, setActiveTab] = useState<'checkin' | 'invite' | 'referral'>('checkin')
   const [copied, setCopied] = useState(false)
 
   // 簽到狀態
@@ -114,10 +115,32 @@ export default function EarnPage() {
             <UserPlus size={16} />
             邀請好友
           </motion.button>
+          <motion.button
+            onClick={() => setActiveTab('referral')}
+            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'referral'
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                : 'bg-[#1C1C1E] text-gray-400 border border-white/5'
+            }`}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Users size={16} />
+            推薦系統
+          </motion.button>
         </div>
 
         <AnimatePresence mode="wait">
-          {activeTab === 'checkin' ? (
+          {activeTab === 'referral' ? (
+            <motion.div
+              key="referral"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-3"
+            >
+              <ReferralTree />
+            </motion.div>
+          ) : activeTab === 'checkin' ? (
             <motion.div
               key="checkin"
               initial={{ opacity: 0, x: -20 }}

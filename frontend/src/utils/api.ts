@@ -647,6 +647,33 @@ export async function getRecommendedPackets(): Promise<RedPacket[]> {
   return api.get('/v1/redpackets/recommended')
 }
 
+// ============ 推荐系统 API ============
+
+export interface ReferralStats {
+  tier1_count: number
+  tier2_count: number
+  total_referrals: number
+  total_reward: string
+  reward_count: number
+  tier1_reward: string
+  tier2_reward: string
+}
+
+export interface ReferralTreeNode {
+  user_id: number
+  username: string | null
+  referral_code: string | null
+  referrals: ReferralTreeNode[]
+}
+
+export async function getReferralStats(): Promise<ReferralStats> {
+  return api.get('/v1/users/me/referral/stats')
+}
+
+export async function getReferralTree(): Promise<ReferralTreeNode> {
+  return api.get('/v1/users/me/referral/tree')
+}
+
 export const INVITE_MILESTONES: InviteMilestone[] = [
   { target: 5, reward: 5, achieved: false },
   { target: 10, reward: 15, achieved: false },
