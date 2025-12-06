@@ -308,45 +308,62 @@ async def claim_red_packet(
     
     if success and amount:
         # Redis抢红包成功，异步同步到数据库
-        # 这里先查找红包以获取完整信息
-        result = await db.execute(select(RedPacket).where(RedPacket.uuid == packet_uuid))
-        packet = result.scalar_one_or_none()
-        
-        if not packet:
-            raise HTTPException(status_code=404, detail="Red packet not found")
-        
-        # 创建领取记录
-        claim = RedPacketClaim(
-            red_packet_id=packet.id,
-            user_id=claimer.id,
-            amount=amount,
-            is_bomb=False,  # 红包炸弹逻辑在Redis中处理
-            penalty_amount=None,
-        )
-        db.add(claim)
-        
-        # 更新红包状态
-        packet.claimed_amount += amount
-        packet.claimed_count = packet_status['claimed_count']
-        if packet_status['status'] == 'COMPLETED':
-            packet.status = RedPacketStatus.COMPLETED
-            packet.completed_at = datetime.utcnow()
-        
-        await db.commit()
-        
-        # 使用LedgerService更新余额
-        from api.services.ledger_service import LedgerService
-        await LedgerService.create_entry(
-            db=db,
-            user_id=claimer.id,
-            amount=amount,
-            currency=packet.currency.value.upper(),
-            entry_type='REDPACKET_CLAIM',
-            related_type='red_packet',
-            related_id=packet.id,
-            description=f"領取紅包: {amount} {packet.currency.value}",
-            created_by='user'
-        )
+        # 将同步任务加入队列
+        try:
+            from api.services.queue_service import get_queue_service
+            queue_service = get_queue_service()
+            
+            await queue_service.enqueue_ledger_sync(
+                packet_uuid=packet_uuid,
+                user_id=claimer.id,
+                claim_id=claim_id,
+                amount=float(amount),
+                currency=packet.currency.value.upper(),
+                packet_status=packet_status
+            )
+            
+            logger.info(f"✅ 账本同步任务已加入队列: packet={packet_uuid}, user={claimer.id}")
+        except Exception as e:
+            logger.warning(f"⚠️ 加入队列失败，使用同步模式: {e}")
+            # 回退到同步模式
+            result = await db.execute(select(RedPacket).where(RedPacket.uuid == packet_uuid))
+            packet = result.scalar_one_or_none()
+            
+            if not packet:
+                raise HTTPException(status_code=404, detail="Red packet not found")
+            
+            # 创建领取记录
+            claim = RedPacketClaim(
+                red_packet_id=packet.id,
+                user_id=claimer.id,
+                amount=amount,
+                is_bomb=False,
+                penalty_amount=None,
+            )
+            db.add(claim)
+            
+            # 更新红包状态
+            packet.claimed_amount += amount
+            packet.claimed_count = packet_status['claimed_count']
+            if packet_status['status'] == 'COMPLETED':
+                packet.status = RedPacketStatus.COMPLETED
+                packet.completed_at = datetime.utcnow()
+            
+            await db.commit()
+            
+            # 使用LedgerService更新余额
+            from api.services.ledger_service import LedgerService
+            await LedgerService.create_entry(
+                db=db,
+                user_id=claimer.id,
+                amount=amount,
+                currency=packet.currency.value.upper(),
+                entry_type='CLAIM_PACKET',
+                related_type='red_packet',
+                related_id=packet.id,
+                description=f"領取紅包: {amount} {packet.currency.value}",
+                created_by='user'
+            )
         
         return ClaimResult(
             success=True,

@@ -60,12 +60,21 @@ class PaymentService:
     """支付网关服务"""
     
     def __init__(self):
-        self.providers = {
-            'unionpay': MockUnionPayProvider(),
-            # 未来可以添加更多支付提供者
-            # 'visa': VisaProvider(),
-            # 'alipay': AlipayProvider(),
-        }
+        # 尝试加载真实支付提供者
+        try:
+            from api.services.payment_providers.alchemy_pay import AlchemyPayProvider
+            alchemy_pay = AlchemyPayProvider()
+            self.providers = {
+                'unionpay': MockUnionPayProvider(),
+                'alchemy_pay': alchemy_pay,
+                'alchemy': alchemy_pay,  # 别名
+            }
+        except ImportError:
+            logger.warning("⚠️ Alchemy Pay提供者未找到，仅使用Mock提供者")
+            self.providers = {
+                'unionpay': MockUnionPayProvider(),
+            }
+        
         self.profit_spread = Decimal('0.03')  # 3%利润点
     
     async def get_exchange_rate(
