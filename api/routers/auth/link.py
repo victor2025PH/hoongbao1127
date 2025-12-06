@@ -13,7 +13,7 @@ from shared.database.connection import get_db_session
 from shared.database.models import User
 from api.services.identity_service import IdentityService
 from api.utils.telegram_auth import get_tg_id_from_header
-from api.routers.auth import create_access_token, TokenResponse
+from api.utils.auth_utils import create_access_token, TokenResponse
 from shared.config.settings import get_settings
 
 router = APIRouter(prefix="/link", tags=["Account Link"])
