@@ -678,6 +678,9 @@ export const INVITE_MILESTONES: InviteMilestone[] = [
   { target: 5, reward: 5, achieved: false },
   { target: 10, reward: 15, achieved: false },
   { target: 25, reward: 50, achieved: false },
+  { target: 50, reward: 150, achieved: false },
+  { target: 100, reward: 500, achieved: false },
+]
 
 // ============ 用户反馈 API ============
 
@@ -702,7 +705,4 @@ export async function submitFeedback(request: FeedbackRequest): Promise<Feedback
 export async function getFeedbackTypes(): Promise<{ types: Array<{ value: string; label: string }> }> {
   return api.get('/v1/feedback/types')
 }
-  { target: 50, reward: 150, achieved: false },
-  { target: 100, reward: 500, achieved: false },
-]
 
