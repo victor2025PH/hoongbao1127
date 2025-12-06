@@ -113,6 +113,29 @@ async def get_my_balance(
     )
 
 
+@router.get("/me/referral/stats")
+async def get_referral_stats(
+    tg_id: Optional[int] = Depends(get_tg_id_from_header),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    获取推荐统计（Tier 1 & Tier 2）
+    """
+    if not tg_id:
+        raise HTTPException(status_code=401, detail="Telegram user ID is required")
+    
+    result = await db.execute(select(User).where(User.tg_id == tg_id))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    from api.services.referral_service import ReferralService
+    stats = await ReferralService.get_referral_stats(db, user.id)
+    
+    return stats
+
+
 # 管理后台用户列表API
 @router.get("/list")
 async def list_users(

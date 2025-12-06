@@ -268,7 +268,7 @@ class ReferralService:
         Returns:
             推荐树结构
         """
-        def build_tree(current_user_id: int, depth: int) -> Dict[str, Any]:
+        async def build_tree(current_user_id: int, depth: int) -> Optional[Dict[str, Any]]:
             if depth > max_depth:
                 return None
             
@@ -293,11 +293,17 @@ class ReferralService:
             }
             
             for referral in referrals:
-                child_tree = build_tree(referral.id, depth + 1)
+                child_tree = await build_tree(referral.id, depth + 1)
                 if child_tree:
                     tree['referrals'].append(child_tree)
             
             return tree
         
-        return build_tree(user_id, 0)
+        result = await build_tree(user_id, 0)
+        return result if result else {
+            'user_id': user_id,
+            'username': None,
+            'referral_code': None,
+            'referrals': []
+        }
 
