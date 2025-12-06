@@ -76,9 +76,18 @@ async def get_balance(
     tg_id: Optional[int] = Depends(get_tg_id_from_header),
     db: AsyncSession = Depends(get_db_session)
 ):
-    """獲取餘額"""
+    """獲取餘額（带缓存）"""
     if tg_id is None:
         raise HTTPException(status_code=401, detail="Telegram user ID is required")
+    
+    # 尝试从缓存获取
+    from api.services.cache_service import get_cache_service
+    cache = get_cache_service()
+    cache_key = f"balance:{tg_id}"
+    cached_balance = await cache.get(cache_key)
+    
+    if cached_balance:
+        return BalanceResponse(**cached_balance)
     
     result = await db.execute(select(User).where(User.tg_id == tg_id))
     user = result.scalar_one_or_none()
@@ -86,21 +95,37 @@ async def get_balance(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    usdt = float(user.balance_usdt or 0)
-    ton = float(user.balance_ton or 0)
-    stars = user.balance_stars or 0
-    points = user.balance_points or 0
+    # 使用 LedgerService 获取余额（如果可用）
+    try:
+        from api.services.ledger_service import LedgerService
+        from decimal import Decimal
+        
+        usdt = float(await LedgerService.get_balance(db, user.id, 'USDT') or Decimal('0'))
+        ton = float(await LedgerService.get_balance(db, user.id, 'TON') or Decimal('0'))
+        stars = int(await LedgerService.get_balance(db, user.id, 'STARS') or Decimal('0'))
+        points = int(await LedgerService.get_balance(db, user.id, 'POINTS') or Decimal('0'))
+    except:
+        # 回退到用户表余额
+        usdt = float(user.balance_usdt or 0)
+        ton = float(user.balance_ton or 0)
+        stars = user.balance_stars or 0
+        points = user.balance_points or 0
     
     # 簡單折算 (實際應該使用匯率 API)
     total_usdt = usdt + ton * 5.0 + stars * 0.01 + points * 0.001
     
-    return BalanceResponse(
+    balance_response = BalanceResponse(
         usdt=usdt,
         ton=ton,
         stars=stars,
         points=points,
         total_usdt=round(total_usdt, 2),
     )
+    
+    # 缓存 30 秒
+    await cache.set(cache_key, balance_response.model_dump(), expire=30)
+    
+    return balance_response
 
 
 @router.get("/transactions", response_model=List[TransactionResponse])

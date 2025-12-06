@@ -105,6 +105,14 @@ try:
 except ImportError as e:
     logger.warning(f"Monitoring middleware not available: {e}")
 
+# 速率限制中间件
+try:
+    from api.middleware.rate_limit import RateLimitMiddleware
+    app.add_middleware(RateLimitMiddleware)
+    logger.info("✅ Rate limit middleware enabled")
+except ImportError as e:
+    logger.warning(f"Rate limit middleware not available: {e}")
+
 # 全局異常處理
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -147,6 +155,7 @@ app.include_router(checkin.router, prefix="/api/checkin", tags=["簽到"])
 app.include_router(checkin.router, prefix="/api/v1/checkin", tags=["簽到-v1"])  # 兼容 miniapp 的 /v1/checkin 路径
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["任務"])
 app.include_router(share.router, prefix="/api/v1/share", tags=["分享"])
+app.include_router(feedback.router, prefix="/api/v1/feedback", tags=["用户反馈"])
 app.include_router(chats.router, prefix="/api/v1/chats", tags=["群組"])
 app.include_router(messages.router, prefix="/api/v1/messages", tags=["消息"])
 
