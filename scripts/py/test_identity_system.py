@@ -169,7 +169,7 @@ async def test_ledger_service():
                 user_id=user.id,
                 amount=-Decimal('20.0'),
                 currency='USDT',
-                entry_type='REDPACKET_SEND',
+                entry_type='SEND_PACKET',  # 使用LedgerCategory中定义的枚举值
                 related_type='red_packet',
                 description='测试发送红包',
                 created_by='test'
