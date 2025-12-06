@@ -124,6 +124,7 @@ export async function generateMagicLink(
 }
 
 // 获取当前用户（支持JWT Token）
+// Auth API endpoints
 export async function getCurrentUser(): Promise<{ data: any }> {
   // 检查是否有JWT Token
   const token = localStorage.getItem('auth_token')

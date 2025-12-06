@@ -95,6 +95,12 @@ class Settings(BaseSettings):
     # AI 系統對接
     AI_API_KEY: str = ""  # AI 系統 API 金鑰（留空則開發模式允許任意金鑰）
     AI_API_RATE_LIMIT: int = 100  # 每分鐘請求限制
+    
+    # 支付網關配置
+    ALCHEMY_PAY_API_KEY: str = ""  # Alchemy Pay API Key
+    ALCHEMY_PAY_API_SECRET: str = ""  # Alchemy Pay API Secret
+    ALCHEMY_PAY_BASE_URL: str = "https://api.alchemypay.org"  # Alchemy Pay API Base URL
+    ALCHEMY_PAY_MERCHANT_ID: str = ""  # Alchemy Pay Merchant ID
 
 
 @lru_cache()

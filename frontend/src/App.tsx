@@ -9,6 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import DebugPanel from './components/DebugPanel'
 import { setAlertCallback, setConfirmCallback } from './utils/telegram'
 import { notificationManager } from './utils/notification'
+import { AuthGuard } from './utils/auth/AuthGuard'
 
 // 懒加载页面
 const WalletPage = lazy(() => import('./pages/WalletPage'))
@@ -128,17 +129,19 @@ export default function App() {
         <ErrorBoundary>
           <Suspense fallback={<Loading />}>
             <Routes>
-              <Route path="/" element={<WalletPage />} />
-              <Route path="/packets" element={<PacketsPage />} />
-              <Route path="/tasks" element={<TasksPage />} />
-              <Route path="/send" element={<SendRedPacket />} />
-              <Route path="/earn" element={<EarnPage />} />
-              <Route path="/game" element={<GamePage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/recharge" element={<Recharge />} />
-              <Route path="/withdraw" element={<Withdraw />} />
-              <Route path="/exchange" element={<ExchangePage />} />
-              <Route path="/lucky-wheel" element={<LuckyWheelPage />} />
+              {/* 使用AuthGuard保护需要认证的路由 */}
+              <Route path="/" element={<AuthGuard><WalletPage /></AuthGuard>} />
+              <Route path="/packets" element={<AuthGuard><PacketsPage /></AuthGuard>} />
+              <Route path="/tasks" element={<AuthGuard><TasksPage /></AuthGuard>} />
+              <Route path="/send" element={<AuthGuard><SendRedPacket /></AuthGuard>} />
+              <Route path="/earn" element={<AuthGuard><EarnPage /></AuthGuard>} />
+              <Route path="/game" element={<AuthGuard><GamePage /></AuthGuard>} />
+              <Route path="/profile" element={<AuthGuard><ProfilePage /></AuthGuard>} />
+              <Route path="/recharge" element={<AuthGuard><Recharge /></AuthGuard>} />
+              <Route path="/withdraw" element={<AuthGuard><Withdraw /></AuthGuard>} />
+              <Route path="/exchange" element={<AuthGuard><ExchangePage /></AuthGuard>} />
+              <Route path="/lucky-wheel" element={<AuthGuard><LuckyWheelPage /></AuthGuard>} />
+              {/* Debug页面不需要认证 */}
               <Route path="/debug" element={<DebugPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
