@@ -110,19 +110,23 @@ class LedgerService:
         balance.updated_at = datetime.utcnow()
         
         # 创建账本条目
+        from shared.database.models import LedgerCategory
+        import uuid as uuid_lib
+        
+        entry_category = LedgerCategory(entry_type.lower())
+        
         entry = LedgerEntry(
+            uuid=str(uuid_lib.uuid4()),
             user_id=user_id,
             amount=amount,
-            currency=currency,
-            type=entry_type,
-            related_type=related_type,
-            related_id=related_id,
-            balance_before=balance_before,
+            currency=currency_enum,
             balance_after=balance_after,
-            description=description,
-            metadata=json.dumps(metadata) if metadata else None,
-            created_at=datetime.utcnow(),
-            created_by=created_by
+            category=entry_category,  # 使用category字段
+            ref_type=related_type,  # 使用ref_type字段
+            ref_id=str(related_id) if related_id else None,  # 使用ref_id字段（字符串类型）
+            note=description,  # 使用note字段
+            meta_data=metadata,  # 使用meta_data字段
+            created_at=datetime.utcnow()
         )
         
         db.add(entry)
