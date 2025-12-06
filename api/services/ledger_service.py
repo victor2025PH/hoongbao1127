@@ -80,29 +80,33 @@ class LedgerService:
         Returns:
             账本条目信息
         """
-        from shared.database.models import LedgerEntry
+        from shared.database.models import LedgerEntry, CurrencyType, LedgerCategory
+        import uuid as uuid_lib
         
-        currency = currency.upper()
-        balance_field = f'{currency.lower()}_balance'
+        currency_enum = CurrencyType(currency.lower())
+        balance_field = f'{currency_enum.value}_balance'
         
         # 获取当前余额（优先从Redis）
-        balance_before = await LedgerService.get_balance(db, user_id, currency)
+        balance_before = await LedgerService.get_balance(db, user_id, currency_enum.value)
         
         # 计算新余额
         balance_after = balance_before + amount
         
         # 检查余额是否足够（如果是减少操作）
         if balance_after < 0:
-            raise ValueError(f"Insufficient balance: {currency} {balance_before}, required: {abs(amount)}")
+            raise ValueError(f"Insufficient balance: {currency_enum.value} {balance_before}, required: {abs(amount)}")
         
         # 获取或创建余额记录
         result = await db.execute(
-            select(UserBalance).where(UserBalance.user_id == user_id)
+            select(UserBalance).where(
+                UserBalance.user_id == user_id,
+                UserBalance.currency == currency_enum
+            )
         )
         balance = result.scalar_one_or_none()
         
         if not balance:
-            balance = UserBalance(user_id=user_id)
+            balance = UserBalance(user_id=user_id, currency=currency_enum)
             db.add(balance)
         
         # 更新余额
@@ -110,9 +114,6 @@ class LedgerService:
         balance.updated_at = datetime.utcnow()
         
         # 创建账本条目
-        from shared.database.models import LedgerCategory
-        import uuid as uuid_lib
-        
         entry_category = LedgerCategory(entry_type.lower())
         
         entry = LedgerEntry(
@@ -138,17 +139,17 @@ class LedgerService:
         
         logger.info(
             f"Ledger entry created: user={user_id}, type={entry_type}, "
-            f"amount={amount} {currency}, balance: {balance_before} -> {balance_after}"
+            f"amount={amount} {currency_enum.value}, balance: {balance_before} -> {balance_after}"
         )
         
         return {
             'entry_id': entry.id,
             'user_id': user_id,
             'amount': str(amount),
-            'currency': currency,
+            'currency': currency_enum.value,
             'balance_before': str(balance_before),
             'balance_after': str(balance_after),
-            'type': entry_type
+            'category': entry_type
         }
     
     @staticmethod
