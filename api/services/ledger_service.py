@@ -204,8 +204,9 @@ class LedgerService:
         """更新Redis余额缓存"""
         try:
             r = get_redis_client()
-            cache_key = f"user:balance:{user_id}:{currency.lower()}"
-            r.setex(cache_key, 3600, str(balance))  # 1小时过期
+            if r:
+                cache_key = f"user:balance:{user_id}:{currency.lower()}"
+                r.setex(cache_key, 3600, str(balance))  # 1小时过期
         except Exception as e:
             logger.warning(f"Failed to update Redis balance cache: {e}")
     
