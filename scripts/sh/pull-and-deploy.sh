@@ -73,19 +73,63 @@ log_step "Pulling latest code..."
 CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "master")
 log_info "Current branch: $CURRENT_BRANCH"
 
-# Save local changes (if any)
-if ! git diff-index --quiet HEAD --; then
-    log_warn "Uncommitted changes detected, stashing..."
-    git stash save "Auto-saved at $(date '+%Y-%m-%d %H:%M:%S')" || true
+# Check for local changes (more comprehensive check)
+HAS_LOCAL_CHANGES=false
+if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+    HAS_LOCAL_CHANGES=true
+elif ! git diff-files --quiet 2>/dev/null; then
+    HAS_LOCAL_CHANGES=true
 fi
 
-# Pull code
-if git pull origin "$CURRENT_BRANCH"; then
-    log_info "Code pulled successfully"
-else
-    log_error "Failed to pull code"
-    exit 1
+# Save local changes if they exist
+if [ "$HAS_LOCAL_CHANGES" = true ]; then
+    log_warn "Uncommitted local changes detected"
+    echo "Files with local changes:"
+    git status --short | head -10 || true
+    log_warn "Stashing local changes to allow pull..."
+    git stash save "Auto-stashed before pull at $(date '+%Y-%m-%d %H:%M:%S')" || {
+        log_error "Failed to stash local changes"
+        echo "Please manually commit or stash your changes:"
+        echo "  git stash"
+        echo "  or"
+        echo "  git commit -am 'Local changes'"
+        exit 1
+    }
+    log_info "Local changes stashed successfully"
 fi
+
+# Pull code with retry logic
+PULL_ATTEMPTS=0
+MAX_PULL_ATTEMPTS=2
+
+while [ $PULL_ATTEMPTS -lt $MAX_PULL_ATTEMPTS ]; do
+    if git pull origin "$CURRENT_BRANCH" 2>&1; then
+        log_info "Code pulled successfully"
+        break
+    else
+        PULL_ATTEMPTS=$((PULL_ATTEMPTS + 1))
+        if [ $PULL_ATTEMPTS -lt $MAX_PULL_ATTEMPTS ]; then
+            log_warn "Pull failed, attempting to resolve conflicts..."
+            # Try to stash any remaining changes
+            git stash save "Auto-stashed during pull retry at $(date '+%Y-%m-%d %H:%M:%S')" 2>/dev/null || true
+            # Reset to remote state if needed
+            log_warn "Resetting to match remote branch..."
+            git fetch origin "$CURRENT_BRANCH"
+            git reset --hard "origin/$CURRENT_BRANCH" || {
+                log_error "Failed to reset to remote branch"
+                exit 1
+            }
+            log_info "Reset to remote branch, pull should succeed now"
+        else
+            log_error "Failed to pull code after $MAX_PULL_ATTEMPTS attempts"
+            echo "Please manually resolve conflicts:"
+            echo "  git status"
+            echo "  git stash"
+            echo "  git pull origin $CURRENT_BRANCH"
+            exit 1
+        fi
+    fi
+done
 
 # 4. Check required tools
 log_step "Checking required tools..."
