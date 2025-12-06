@@ -8,6 +8,7 @@ User=www-data
 Group=www-data
 WorkingDirectory=/opt/luckyred/api
 Environment="PATH=/opt/luckyred/api/.venv/bin"
+Environment="PYTHONPATH=/opt/luckyred"
 EnvironmentFile=/opt/luckyred/.env
 ExecStart=/opt/luckyred/api/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8080
 Restart=always
