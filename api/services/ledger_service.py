@@ -255,7 +255,9 @@ class LedgerService:
             query = query.where(LedgerEntry.currency == currency.upper())
         
         if entry_type:
-            query = query.where(LedgerEntry.type == entry_type)
+            from shared.database.models import LedgerCategory
+            entry_category = LedgerCategory(entry_type.lower())
+            query = query.where(LedgerEntry.category == entry_category)
         
         query = query.order_by(LedgerEntry.created_at.desc()).limit(limit).offset(offset)
         
