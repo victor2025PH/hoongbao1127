@@ -70,8 +70,16 @@ async def test_referral_system():
     print("测试2: 推荐系统（Tier 1 & Tier 2）")
     print("="*50)
     
-    # 创建数据库连接
-    engine = create_async_engine(settings.DATABASE_URL)
+    # 创建数据库连接（SQLite需要使用aiosqlite）
+    database_url = settings.DATABASE_URL
+    if database_url.startswith('sqlite'):
+        # 将sqlite://替换为sqlite+aiosqlite://
+        if database_url.startswith('sqlite:///'):
+            database_url = database_url.replace('sqlite:///', 'sqlite+aiosqlite:///', 1)
+        elif database_url.startswith('sqlite://'):
+            database_url = database_url.replace('sqlite://', 'sqlite+aiosqlite://', 1)
+    
+    engine = create_async_engine(database_url, echo=False)
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     
     async with async_session() as db:
@@ -217,7 +225,16 @@ async def test_payment_referral():
     print("测试3: 支付时的推荐奖励")
     print("="*50)
     
-    engine = create_async_engine(settings.DATABASE_URL)
+    # 创建数据库连接（SQLite需要使用aiosqlite）
+    database_url = settings.DATABASE_URL
+    if database_url.startswith('sqlite'):
+        # 将sqlite://替换为sqlite+aiosqlite://
+        if database_url.startswith('sqlite:///'):
+            database_url = database_url.replace('sqlite:///', 'sqlite+aiosqlite:///', 1)
+        elif database_url.startswith('sqlite://'):
+            database_url = database_url.replace('sqlite://', 'sqlite+aiosqlite://', 1)
+    
+    engine = create_async_engine(database_url, echo=False)
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     
     async with async_session() as db:
