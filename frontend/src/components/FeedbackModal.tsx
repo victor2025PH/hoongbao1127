@@ -13,7 +13,7 @@ interface FeedbackModalProps {
 
 export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const { t } = useTranslation()
-  const [type, setType] = useState('bug')
+  const [type, setType] = useState<'bug' | 'feature' | 'suggestion' | 'other'>('bug')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [contact, setContact] = useState('')
@@ -87,20 +87,20 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                 {t('feedback_type') || '反馈类型'}
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {['bug', 'feature', 'suggestion', 'other'].map((t) => (
+                {(['bug', 'feature', 'suggestion', 'other'] as const).map((feedbackType) => (
                   <button
-                    key={t}
-                    onClick={() => setType(t)}
+                    key={feedbackType}
+                    onClick={() => setType(feedbackType)}
                     className={`py-2 px-4 rounded-xl text-sm font-medium transition-colors ${
-                      type === t
+                      type === feedbackType
                         ? 'bg-purple-500 text-white'
                         : 'bg-white/5 text-gray-400 hover:bg-white/10'
                     }`}
                   >
-                    {t === 'bug' && (t('bug_report') || 'Bug 报告')}
-                    {t === 'feature' && (t('feature_request') || '功能建议')}
-                    {t === 'suggestion' && (t('suggestion') || '改进建议')}
-                    {t === 'other' && (t('other') || '其他')}
+                    {feedbackType === 'bug' && (t('bug_report') || 'Bug 报告')}
+                    {feedbackType === 'feature' && (t('feature_request') || '功能建议')}
+                    {feedbackType === 'suggestion' && (t('suggestion') || '改进建议')}
+                    {feedbackType === 'other' && (t('other') || '其他')}
                   </button>
                 ))}
               </div>
