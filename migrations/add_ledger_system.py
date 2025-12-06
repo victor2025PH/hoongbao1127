@@ -195,36 +195,114 @@ def upgrade():
                 users_balance_cols = ['balance_usdt', 'balance_ton', 'balance_stars', 'balance_points']
                 
                 if all(col in users_columns for col in users_balance_cols):
+                    # 检查user_balances表是否有currency列（可能是NOT NULL）
+                    has_currency = 'currency' in columns
+                    
                     if is_sqlite_db:
-                        # SQLite: 使用INSERT OR REPLACE
-                        conn.execute(text("""
-                            INSERT OR REPLACE INTO user_balances (user_id, usdt_balance, ton_balance, stars_balance, points_balance)
-                            SELECT 
-                                id,
-                                COALESCE(balance_usdt, 0),
-                                COALESCE(balance_ton, 0),
-                                COALESCE(balance_stars, 0),
-                                COALESCE(balance_points, 0)
-                            FROM users;
-                        """))
+                        # SQLite: 使用UPDATE或INSERT OR REPLACE
+                        if has_currency:
+                            # 如果currency列存在且是NOT NULL，需要包含它
+                            # 先尝试UPDATE现有记录
+                            conn.execute(text("""
+                                UPDATE user_balances
+                                SET 
+                                    usdt_balance = COALESCE((SELECT balance_usdt FROM users WHERE users.id = user_balances.user_id), 0),
+                                    ton_balance = COALESCE((SELECT balance_ton FROM users WHERE users.id = user_balances.user_id), 0),
+                                    stars_balance = COALESCE((SELECT balance_stars FROM users WHERE users.id = user_balances.user_id), 0),
+                                    points_balance = COALESCE((SELECT balance_points FROM users WHERE users.id = user_balances.user_id), 0)
+                                WHERE user_id IN (SELECT id FROM users);
+                            """))
+                            
+                            # 然后插入新用户（如果currency有默认值，或者我们需要设置一个）
+                            # 检查currency列是否有默认值
+                            currency_col = next((col for col in inspector.get_columns('user_balances') if col['name'] == 'currency'), None)
+                            currency_default = currency_col.get('default') if currency_col else None
+                            
+                            if currency_default:
+                                conn.execute(text(f"""
+                                    INSERT OR IGNORE INTO user_balances (user_id, currency, usdt_balance, ton_balance, stars_balance, points_balance)
+                                    SELECT 
+                                        id,
+                                        {currency_default},
+                                        COALESCE(balance_usdt, 0),
+                                        COALESCE(balance_ton, 0),
+                                        COALESCE(balance_stars, 0),
+                                        COALESCE(balance_points, 0)
+                                    FROM users
+                                    WHERE id NOT IN (SELECT user_id FROM user_balances);
+                                """))
+                            else:
+                                # 如果没有默认值，尝试使用'USDT'作为默认值
+                                conn.execute(text("""
+                                    INSERT OR IGNORE INTO user_balances (user_id, currency, usdt_balance, ton_balance, stars_balance, points_balance)
+                                    SELECT 
+                                        id,
+                                        'USDT',
+                                        COALESCE(balance_usdt, 0),
+                                        COALESCE(balance_ton, 0),
+                                        COALESCE(balance_stars, 0),
+                                        COALESCE(balance_points, 0)
+                                    FROM users
+                                    WHERE id NOT IN (SELECT user_id FROM user_balances);
+                                """))
+                        else:
+                            # 没有currency列，直接INSERT OR REPLACE
+                            conn.execute(text("""
+                                INSERT OR REPLACE INTO user_balances (user_id, usdt_balance, ton_balance, stars_balance, points_balance)
+                                SELECT 
+                                    id,
+                                    COALESCE(balance_usdt, 0),
+                                    COALESCE(balance_ton, 0),
+                                    COALESCE(balance_stars, 0),
+                                    COALESCE(balance_points, 0)
+                                FROM users;
+                            """))
                     else:
                         # PostgreSQL: 使用ON CONFLICT
-                        conn.execute(text("""
-                            INSERT INTO user_balances (user_id, usdt_balance, ton_balance, stars_balance, points_balance)
-                            SELECT 
-                                id,
-                                COALESCE(balance_usdt, 0),
-                                COALESCE(balance_ton, 0),
-                                COALESCE(balance_stars, 0),
-                                COALESCE(balance_points, 0)
-                            FROM users
-                            ON CONFLICT (user_id) DO UPDATE
-                            SET 
-                                usdt_balance = EXCLUDED.usdt_balance,
-                                ton_balance = EXCLUDED.ton_balance,
-                                stars_balance = EXCLUDED.stars_balance,
-                                points_balance = EXCLUDED.points_balance;
-                        """))
+                        if has_currency:
+                            # 先UPDATE
+                            conn.execute(text("""
+                                UPDATE user_balances
+                                SET 
+                                    usdt_balance = COALESCE(users.balance_usdt, 0),
+                                    ton_balance = COALESCE(users.balance_ton, 0),
+                                    stars_balance = COALESCE(users.balance_stars, 0),
+                                    points_balance = COALESCE(users.balance_points, 0)
+                                FROM users
+                                WHERE user_balances.user_id = users.id;
+                            """))
+                            
+                            # 然后INSERT新用户
+                            conn.execute(text("""
+                                INSERT INTO user_balances (user_id, currency, usdt_balance, ton_balance, stars_balance, points_balance)
+                                SELECT 
+                                    id,
+                                    COALESCE(currency, 'USDT'),
+                                    COALESCE(balance_usdt, 0),
+                                    COALESCE(balance_ton, 0),
+                                    COALESCE(balance_stars, 0),
+                                    COALESCE(balance_points, 0)
+                                FROM users
+                                WHERE id NOT IN (SELECT user_id FROM user_balances)
+                                ON CONFLICT (user_id) DO NOTHING;
+                            """))
+                        else:
+                            conn.execute(text("""
+                                INSERT INTO user_balances (user_id, usdt_balance, ton_balance, stars_balance, points_balance)
+                                SELECT 
+                                    id,
+                                    COALESCE(balance_usdt, 0),
+                                    COALESCE(balance_ton, 0),
+                                    COALESCE(balance_stars, 0),
+                                    COALESCE(balance_points, 0)
+                                FROM users
+                                ON CONFLICT (user_id) DO UPDATE
+                                SET 
+                                    usdt_balance = EXCLUDED.usdt_balance,
+                                    ton_balance = EXCLUDED.ton_balance,
+                                    stars_balance = EXCLUDED.stars_balance,
+                                    points_balance = EXCLUDED.points_balance;
+                            """))
                     print("✅ Initialized user_balances from users table")
                 else:
                     print("⚠️ Users table missing balance columns, skipping balance migration")
