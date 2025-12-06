@@ -72,59 +72,72 @@ def upgrade():
         # 开始事务（SQLite需要显式事务）
         conn.execute(text("BEGIN TRANSACTION;"))
         try:
-            # 1. 获取所有列名（除了tg_id）
-            all_columns = [col['name'] for col in columns if col['name'] != 'tg_id']
-            columns_str = ', '.join(all_columns)
+            # 1. 获取所有列名和类型（除了tg_id）
+            all_columns = [col for col in columns if col['name'] != 'tg_id']
             
-            # 2. 创建新表（tg_id可为NULL）
+            # 2. 构建CREATE TABLE语句（动态包含所有列）
             print("📝 创建新表结构...")
-            conn.execute(text("""
-                CREATE TABLE users_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    tg_id BIGINT,
-                    username VARCHAR(64),
-                    first_name VARCHAR(64),
-                    last_name VARCHAR(64),
-                    language_code VARCHAR(10) DEFAULT 'zh-TW',
-                    balance_usdt NUMERIC(20, 8) DEFAULT 0,
-                    balance_ton NUMERIC(20, 8) DEFAULT 0,
-                    balance_stars BIGINT DEFAULT 0,
-                    balance_points BIGINT DEFAULT 0,
-                    level INTEGER DEFAULT 1,
-                    xp BIGINT DEFAULT 0,
-                    invited_by BIGINT,
-                    invite_code VARCHAR(16),
-                    invite_count INTEGER DEFAULT 0,
-                    invite_earnings NUMERIC(20, 8) DEFAULT 0,
-                    last_checkin DATETIME,
-                    checkin_streak INTEGER DEFAULT 0,
-                    is_banned BOOLEAN DEFAULT 0,
-                    is_admin BOOLEAN DEFAULT 0,
-                    interaction_mode VARCHAR(20) DEFAULT 'auto',
-                    last_interaction_mode VARCHAR(20) DEFAULT 'keyboard',
-                    seamless_switch_enabled BOOLEAN DEFAULT 1,
-                    uuid VARCHAR(36),
-                    wallet_address VARCHAR(255),
-                    wallet_network VARCHAR(50),
-                    referrer_id INTEGER,
-                    referral_code VARCHAR(20),
-                    total_referrals INTEGER DEFAULT 0,
-                    tier1_commission NUMERIC(5, 2) DEFAULT 0.10,
-                    tier2_commission NUMERIC(5, 2) DEFAULT 0.05,
-                    primary_platform VARCHAR(20),
-                    last_active_at DATETIME,
-                    kyc_status VARCHAR(20) DEFAULT 'pending',
-                    kyc_verified_at DATETIME,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                );
-            """))
             
-            # 3. 复制数据（保留tg_id值，即使为NULL也可以）
+            # 获取表结构SQL
+            result = conn.execute(text("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'"))
+            create_sql = result.scalar()
+            
+            if create_sql:
+                # 修改CREATE TABLE语句，将tg_id改为可为NULL
+                create_sql_new = create_sql.replace('tg_id BIGINT NOT NULL', 'tg_id BIGINT')
+                create_sql_new = create_sql_new.replace('tg_id BIGINT UNIQUE NOT NULL', 'tg_id BIGINT')
+                create_sql_new = create_sql_new.replace('CREATE TABLE users', 'CREATE TABLE users_new')
+                conn.execute(text(create_sql_new))
+            else:
+                # 如果无法获取SQL，使用硬编码（包含所有已知列）
+                print("⚠️ 无法获取表结构SQL，使用默认结构...")
+                conn.execute(text("""
+                    CREATE TABLE users_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        tg_id BIGINT,
+                        username VARCHAR(64),
+                        first_name VARCHAR(64),
+                        last_name VARCHAR(64),
+                        language_code VARCHAR(10) DEFAULT 'zh-TW',
+                        balance_usdt NUMERIC(20, 8) DEFAULT 0,
+                        balance_ton NUMERIC(20, 8) DEFAULT 0,
+                        balance_stars BIGINT DEFAULT 0,
+                        balance_points BIGINT DEFAULT 0,
+                        level INTEGER DEFAULT 1,
+                        xp BIGINT DEFAULT 0,
+                        invited_by BIGINT,
+                        invite_code VARCHAR(16),
+                        invite_count INTEGER DEFAULT 0,
+                        invite_earnings NUMERIC(20, 8) DEFAULT 0,
+                        last_checkin DATETIME,
+                        checkin_streak INTEGER DEFAULT 0,
+                        is_banned BOOLEAN DEFAULT 0,
+                        is_admin BOOLEAN DEFAULT 0,
+                        interaction_mode VARCHAR(20) DEFAULT 'auto',
+                        last_interaction_mode VARCHAR(20) DEFAULT 'keyboard',
+                        seamless_switch_enabled BOOLEAN DEFAULT 1,
+                        share_count INTEGER DEFAULT 0,
+                        uuid VARCHAR(36),
+                        wallet_address VARCHAR(255),
+                        wallet_network VARCHAR(50),
+                        referrer_id INTEGER,
+                        referral_code VARCHAR(20),
+                        total_referrals INTEGER DEFAULT 0,
+                        tier1_commission NUMERIC(5, 2) DEFAULT 0.10,
+                        tier2_commission NUMERIC(5, 2) DEFAULT 0.05,
+                        primary_platform VARCHAR(20),
+                        last_active_at DATETIME,
+                        kyc_status VARCHAR(20) DEFAULT 'pending',
+                        kyc_verified_at DATETIME,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                """))
+            
+            # 3. 复制数据（使用SELECT *，让SQLite自动匹配列）
             print("📋 复制数据到新表...")
-            conn.execute(text(f"""
-                INSERT INTO users_new ({columns_str}, tg_id)
-                SELECT {columns_str}, tg_id FROM users;
+            conn.execute(text("""
+                INSERT INTO users_new SELECT * FROM users;
             """))
             
             # 4. 检查数据完整性
