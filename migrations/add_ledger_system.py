@@ -31,23 +31,46 @@ def upgrade():
         # 注意：SQLite中'type'是保留字，需要用引号括起来
         type_column = '"type"' if is_sqlite_db else 'type'
         
-        conn.execute(text(f"""
-            CREATE TABLE IF NOT EXISTS ledger_entries (
-                id {id_type},
-                user_id INTEGER NOT NULL REFERENCES users(id),
-                amount {decimal_type} NOT NULL,
-                currency VARCHAR(10) NOT NULL,
-                {type_column} VARCHAR(50) NOT NULL,
-                related_type VARCHAR(50),
-                related_id {bigint_type},
-                balance_before {decimal_type} NOT NULL,
-                balance_after {decimal_type} NOT NULL,
-                metadata {json_type},
-                description TEXT,
-                created_at {timestamp_type} {default_now},
-                created_by VARCHAR(50) DEFAULT 'system'
-            );
-        """))
+        # 检查表是否已存在
+        inspector = inspect(sync_engine)
+        table_exists = 'ledger_entries' in inspector.get_table_names()
+        
+        if not table_exists:
+            conn.execute(text(f"""
+                CREATE TABLE ledger_entries (
+                    id {id_type},
+                    user_id INTEGER NOT NULL REFERENCES users(id),
+                    amount {decimal_type} NOT NULL,
+                    currency VARCHAR(10) NOT NULL,
+                    {type_column} VARCHAR(50) NOT NULL,
+                    related_type VARCHAR(50),
+                    related_id {bigint_type},
+                    balance_before {decimal_type} NOT NULL,
+                    balance_after {decimal_type} NOT NULL,
+                    metadata {json_type},
+                    description TEXT,
+                    created_at {timestamp_type} {default_now},
+                    created_by VARCHAR(50) DEFAULT 'system'
+                );
+            """))
+            conn.commit()
+            print("✅ Created ledger_entries table")
+        else:
+            # 表已存在，检查列是否存在
+            columns = [col['name'] for col in inspector.get_columns('ledger_entries')]
+            if 'related_type' not in columns:
+                print("⚠️ Table exists but missing columns, attempting to add...")
+                try:
+                    conn.execute(text("ALTER TABLE ledger_entries ADD COLUMN related_type VARCHAR(50);"))
+                    conn.commit()
+                except Exception as e:
+                    print(f"⚠️ Could not add related_type column: {e}")
+            if 'related_id' not in columns:
+                try:
+                    conn.execute(text(f"ALTER TABLE ledger_entries ADD COLUMN related_id {bigint_type};"))
+                    conn.commit()
+                except Exception as e:
+                    print(f"⚠️ Could not add related_id column: {e}")
         
         # 2. 创建user_balances表（余额快照）
         conn.execute(text(f"""
@@ -65,25 +88,50 @@ def upgrade():
         # 注意：SQLite中'type'是保留字，需要用引号括起来
         type_column = '"type"' if is_sqlite_db else 'type'
         
-        conn.execute(text("""
-            CREATE INDEX IF NOT EXISTS idx_ledger_user_id 
-            ON ledger_entries(user_id);
-        """))
+        # 检查表是否存在
+        inspector = inspect(sync_engine)
+        if 'ledger_entries' not in inspector.get_table_names():
+            print("❌ ledger_entries table does not exist, cannot create indexes")
+            return
         
-        conn.execute(text(f"""
-            CREATE INDEX IF NOT EXISTS idx_ledger_type 
-            ON ledger_entries({type_column});
-        """))
+        # 检查列是否存在
+        columns = [col['name'] for col in inspector.get_columns('ledger_entries')]
         
-        conn.execute(text("""
-            CREATE INDEX IF NOT EXISTS idx_ledger_related 
-            ON ledger_entries(related_type, related_id);
-        """))
+        try:
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_ledger_user_id 
+                ON ledger_entries(user_id);
+            """))
+        except Exception as e:
+            print(f"⚠️ Could not create idx_ledger_user_id: {e}")
         
-        conn.execute(text("""
-            CREATE INDEX IF NOT EXISTS idx_ledger_created_at 
-            ON ledger_entries(created_at);
-        """))
+        if type_column.replace('"', '') in columns or 'type' in columns:
+            try:
+                conn.execute(text(f"""
+                    CREATE INDEX IF NOT EXISTS idx_ledger_type 
+                    ON ledger_entries({type_column});
+                """))
+            except Exception as e:
+                print(f"⚠️ Could not create idx_ledger_type: {e}")
+        
+        if 'related_type' in columns and 'related_id' in columns:
+            try:
+                conn.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ledger_related 
+                    ON ledger_entries(related_type, related_id);
+                """))
+            except Exception as e:
+                print(f"⚠️ Could not create idx_ledger_related: {e}")
+        else:
+            print(f"⚠️ Skipping idx_ledger_related - columns missing: related_type={('related_type' in columns)}, related_id={('related_id' in columns)}")
+        
+        try:
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_ledger_created_at 
+                ON ledger_entries(created_at);
+            """))
+        except Exception as e:
+            print(f"⚠️ Could not create idx_ledger_created_at: {e}")
         
         # 4. 初始化user_balances（从现有users表迁移余额）
         if is_sqlite_db:
