@@ -69,8 +69,8 @@ def upgrade():
                 print(f"⚠️ 备份失败: {e}")
                 print("   继续执行迁移（风险自负）...")
         
-        # 开始事务
-        trans = conn.begin()
+        # 开始事务（SQLite需要显式事务）
+        conn.execute(text("BEGIN TRANSACTION;"))
         try:
             # 1. 获取所有列名（除了tg_id）
             all_columns = [col['name'] for col in columns if col['name'] != 'tg_id']
@@ -151,12 +151,12 @@ def upgrade():
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_referral_code ON users(referral_code);"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_uuid ON users(uuid);"))
             
-            trans.commit()
+            conn.execute(text("COMMIT;"))
             print("✅ 迁移成功！tg_id字段现在可以为NULL")
             print(f"✅ 所有 {count} 条记录已保留")
             
         except Exception as e:
-            trans.rollback()
+            conn.execute(text("ROLLBACK;"))
             print(f"❌ 迁移失败: {e}")
             print("   已回滚，数据库未修改")
             if 'backup_path' in locals():
