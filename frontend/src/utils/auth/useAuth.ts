@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { detectPlatform, isInTelegram } from '../platform';
 import { initTelegram, getTelegramUser } from '../telegram';
-import { api } from '../api';
+import { getCurrentUser, googleAuth, walletAuth, verifyMagicLink } from '../api';
 
 export interface User {
   id: number;
@@ -50,7 +50,7 @@ export function useAuth() {
         
         if (tgUser) {
           // 通过Telegram initData获取用户信息
-          const response = await api.getCurrentUser();
+          const response = await getCurrentUser();
           setAuthState({
             user: response.data,
             loading: false,
@@ -65,7 +65,7 @@ export function useAuth() {
       const token = localStorage.getItem('auth_token');
       if (token) {
         try {
-          const response = await api.getCurrentUser();
+          const response = await getCurrentUser();
           setAuthState({
             user: response.data,
             loading: false,
@@ -102,9 +102,9 @@ export function useAuth() {
     try {
       let response;
       if (provider === 'google') {
-        response = await api.googleAuth(credentials);
+        response = await googleAuth(credentials);
       } else {
-        response = await api.walletAuth(credentials);
+        response = await walletAuth(credentials);
       }
       
       // 保存Token
@@ -127,7 +127,7 @@ export function useAuth() {
   // Magic Link登录
   const loginWithMagicLink = useCallback(async (token: string) => {
     try {
-      const response = await api.verifyMagicLink(token);
+      const response = await verifyMagicLink(token);
       
       // 保存Token
       localStorage.setItem('auth_token', response.data.access_token);
