@@ -1,15 +1,12 @@
 """
 认证路由模块
 """
-# 导出create_access_token和TokenResponse供其他模块使用
-# 注意：auth.py在routers目录下，不在auth子目录
-import sys
-from pathlib import Path
+# 注意：create_access_token 和 TokenResponse 定义在 api/routers/auth.py 文件中
+# 其他模块应该直接从 api.routers.auth 导入，而不是从这个 __init__.py 导入
+# 这样可以避免循环导入问题
 
-# 添加父目录到路径
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# 这个文件主要用于标识 auth 是一个包，并导出子路由
+from api.routers.auth import web, link
 
-from api.routers.auth import create_access_token, TokenResponse
-
-__all__ = ["create_access_token", "TokenResponse"]
+__all__ = ["web", "link"]
 
